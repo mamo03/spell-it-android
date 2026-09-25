@@ -193,7 +193,7 @@
 <script>
 (function(){
   var ROUND_SIZE = 6;
-  var PICK_OPTION_COUNT = 5;
+  var PICK_OPTION_COUNT = 6;
 
   var GAMES = [
     { id:'spell', name:'Spell It!', emoji:'🐣', tagline:'Tap the letters in order to spell the word' },
@@ -429,19 +429,37 @@
     speak(w.word);
   }
 
+  // Longer words (up to 12 letters) get smaller slots/tiles so they still fit on
+  // one screen without scrolling, even on small phones.
+  function tileSizeFor(len){
+    if(len <= 6) return { tile:40, tileH:44, tileFont:19, slot:32, slotH:38, slotFont:18, gap:7 };
+    if(len <= 9) return { tile:34, tileH:38, tileFont:16, slot:27, slotH:32, slotFont:15, gap:6 };
+    return { tile:28, tileH:32, tileFont:14, slot:22, slotH:27, slotFont:13, gap:5 };
+  }
+
   function renderSpellTiles(w){
+    var sz = tileSizeFor(w.word.length);
+
     slotsEl.innerHTML = '';
+    slotsEl.style.gap = sz.gap + 'px';
     for(var i = 0; i < w.word.length; i++){
       var s = document.createElement('div');
       s.className = 'slot';
+      s.style.width = sz.slot + 'px';
+      s.style.height = sz.slotH + 'px';
+      s.style.fontSize = sz.slotFont + 'px';
       slotsEl.appendChild(s);
     }
 
     var letters = shuffle(w.word.split(''));
     tilesEl.innerHTML = '';
+    tilesEl.style.gap = sz.gap + 'px';
     letters.forEach(function(letter){
       var btn = document.createElement('button');
       btn.className = 'tile';
+      btn.style.width = sz.tile + 'px';
+      btn.style.height = sz.tileH + 'px';
+      btn.style.fontSize = sz.tileFont + 'px';
       btn.textContent = letter.toUpperCase();
       btn.addEventListener('click', function(){ handleTap(letter, btn); });
       tilesEl.appendChild(btn);
