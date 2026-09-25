@@ -1,19 +1,23 @@
 # Spell It! — Android app
 
-A native Android wrapper around a pair of word games for young kids. A picture is shown and
-the word is spoken aloud, then:
+A native Android wrapper around a trio of word games for young kids. For Spell It! and
+Pick It!, a picture is shown and the word is spoken aloud; Add It! reads a sentence aloud
+instead. Then:
 
 - **Spell It!** — tap letter tiles in order to spell the word.
 - **Pick It!** — pick the matching word out of 5 options.
+- **Add It!** — listen to a sentence with a missing word, then pick the missing word out
+  of 5 options.
 
-Both games share the same three difficulty levels (Easy/Medium/Hard) and word banks, with
-their own star progress tracked separately per game.
+All three games share the same three difficulty levels (Easy/Medium/Hard) and word banks
+(Add It!'s sentences reuse the same words), with their own star progress tracked
+separately per game.
 
 ## How it's built
 
-- `app/src/main/assets/www/index.html` — both games (HTML/CSS/JS). A games screen picks
-  Spell It! or Pick It!, a levels screen picks the difficulty, then the same play screen
-  renders either mode depending on which game is active.
+- `app/src/main/assets/www/index.html` — all three games (HTML/CSS/JS). A games screen
+  picks Spell It!, Pick It!, or Add It!, a levels screen picks the difficulty, then the
+  same play screen renders whichever mode is active.
 - `MainActivity.kt` — loads that page in a full-screen `WebView` and injects a small
   JavaScript bridge (`window.AndroidTTS`) backed by Android's native `TextToSpeech` engine.
   Android's WebView doesn't implement the browser's Web Speech API, so the page calls this
