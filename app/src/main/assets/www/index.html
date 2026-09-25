@@ -120,6 +120,20 @@
   .blank-chip{ display:inline-block; min-width:70px; padding:2px 12px; border-bottom:3px dashed var(--coral); font-weight:800; color:var(--coral); }
   .blank-chip.filled{ border-bottom-color:transparent; color:var(--leaf); }
 
+  /* See It! mode */
+  .word-card{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:32px; color:var(--ink); text-align:center; letter-spacing:0.5px; text-transform:capitalize; }
+  .picture-options{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; width:100%; max-width:260px; }
+  .picture-option{
+    border:none; border-radius:20px; background:#F5F9FB; aspect-ratio:1 / 1;
+    font-size:44px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.15);
+  }
+  .picture-option:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.15); }
+  .picture-option.shake{ animation:shake .4s ease; }
+  .picture-option.correct{ background:var(--leaf); box-shadow:0 5px 0 rgba(0,0,0,0.15); }
+  .picture-option.dim{ opacity:0.4; }
+  .picture-option.locked{ pointer-events:none; }
+
   .celebrate{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:19px; color:var(--leaf); min-height:22px; text-align:center; }
   .next-btn, .home-btn, .redo-btn{ border:none; color:#fff; font-family:'Baloo 2', sans-serif; font-weight:700; font-size:14px; padding:10px 18px; border-radius:999px; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.15); display:none; }
   .next-btn{ background:var(--leaf); }
@@ -176,6 +190,11 @@
         <div class="pick-options" id="addOptions" style="margin-top:14px;"></div>
       </div>
 
+      <div id="seeArea" class="hidden">
+        <div class="word-card" id="wordCard"></div>
+        <div class="picture-options" id="pictureOptions" style="margin-top:14px;"></div>
+      </div>
+
       <div class="celebrate" id="celebrate"></div>
       <div style="display:flex; gap:10px;">
         <button class="next-btn" id="nextBtn">Next word →</button>
@@ -191,13 +210,15 @@
 (function(){
   var ROUND_SIZE = 6;
   var PICK_OPTION_COUNT = 6;
+  var SEE_OPTION_COUNT = 4;
 
   var GAMES = [
     { id:'spell', name:'Spell It!', emoji:'🐣', tagline:'Tap the letters in order to spell the word' },
     { id:'pick', name:'Pick It!', emoji:'🦉', tagline:'Listen, then pick the matching word' },
-    { id:'add', name:'Add It!', emoji:'🧩', tagline:'Listen to the sentence and pick the missing word' }
+    { id:'add', name:'Add It!', emoji:'🧩', tagline:'Listen to the sentence and pick the missing word' },
+    { id:'see', name:'See It!', emoji:'👀', tagline:'Read the word, then pick the matching picture' }
   ];
-  var LEVEL_TAGLINE_VERB = { spell:'spelling', pick:'picking', add:'completing sentences' };
+  var LEVEL_TAGLINE_VERB = { spell:'spelling', pick:'picking', add:'completing sentences', see:'picking pictures' };
 
   var LEVELS = [
     { id:'easy', name:'Easy', sub:'3-4 letter words', emoji:'🌱',
@@ -242,12 +263,15 @@
   var spellArea = document.getElementById('spellArea');
   var pickArea = document.getElementById('pickArea');
   var addArea = document.getElementById('addArea');
+  var seeArea = document.getElementById('seeArea');
   var slotsEl = document.getElementById('slots');
   var tilesEl = document.getElementById('tiles');
   var pickOptionsEl = document.getElementById('pickOptions');
   var sentenceCardEl = document.getElementById('sentenceCard');
   var addOptionsEl = document.getElementById('addOptions');
   var blankChipEl = null;
+  var wordCardEl = document.getElementById('wordCard');
+  var pictureOptionsEl = document.getElementById('pictureOptions');
   var celebrateEl = document.getElementById('celebrate');
   var nextBtn = document.getElementById('nextBtn');
   var redoBtn = document.getElementById('redoBtn');
@@ -306,10 +330,12 @@
     idx = 0;
     levelScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
-    pictureFrame.classList.toggle('hidden', currentGame.id === 'add');
+    // See It! shows the word, not the picture — the picture is the answer.
+    pictureFrame.classList.toggle('hidden', currentGame.id === 'add' || currentGame.id === 'see');
     spellArea.classList.toggle('hidden', currentGame.id !== 'spell');
     pickArea.classList.toggle('hidden', currentGame.id !== 'pick');
     addArea.classList.toggle('hidden', currentGame.id !== 'add');
+    seeArea.classList.toggle('hidden', currentGame.id !== 'see');
     loadWord();
   }
 
@@ -379,6 +405,15 @@
       renderSentence(item);
       renderProgressDots();
       speak(item.text.replace('___', item.answer));
+      return;
+    }
+
+    if(currentGame.id === 'see'){
+      var seeWord = sessionWords[idx];
+      wordCardEl.textContent = seeWord.word;
+      renderPictureOptions(seeWord);
+      renderProgressDots();
+      speak(seeWord.word);
       return;
     }
 
@@ -523,6 +558,42 @@
       });
       onWordComplete();
     } else {
+      speak(word);
+      btn.classList.remove('shake');
+      void btn.offsetWidth;
+      btn.classList.add('shake');
+    }
+  }
+
+  function renderPictureOptions(w){
+    var pool = currentLevel.words.filter(function(c){ return c.word !== w.word; });
+    var distractors = shuffle(pool).slice(0, SEE_OPTION_COUNT - 1);
+    var options = shuffle([w].concat(distractors));
+
+    pictureOptionsEl.innerHTML = '';
+    options.forEach(function(candidate){
+      var btn = document.createElement('button');
+      btn.className = 'picture-option';
+      btn.textContent = candidate.emoji;
+      btn.setAttribute('aria-label', candidate.word);
+      btn.addEventListener('click', function(){ handleSeePick(candidate.word, btn); });
+      pictureOptionsEl.appendChild(btn);
+    });
+  }
+
+  function handleSeePick(word, btn){
+    var w = sessionWords[idx];
+    if(word === w.word){
+      // onWordComplete() announces the word as part of its "word! Well done."
+      // message, so it isn't spoken again here first.
+      btn.classList.add('correct');
+      Array.prototype.forEach.call(pictureOptionsEl.children, function(optBtn){
+        optBtn.classList.add('locked');
+        if(optBtn !== btn) optBtn.classList.add('dim');
+      });
+      onWordComplete();
+    } else {
+      // Announce the wrong picture's own word, same as a wrong Pick It!/Add It! tap.
       speak(word);
       btn.classList.remove('shake');
       void btn.offsetWidth;
