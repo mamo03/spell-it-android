@@ -31,8 +31,25 @@
   .tagline{ color:#fff; opacity:0.9; font-weight:600; margin-top:-10px; text-align:center; font-size:14px; }
   .hidden{ display:none !important; }
 
-  /* Home screen */
-  .level-list{ width:100%; display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+  /* Games screen */
+  .game-list{ width:100%; display:flex; flex-direction:column; gap:16px; margin-top:6px; }
+  .game-card{
+    background:var(--cloud); border:none; border-radius:26px; padding:22px 20px;
+    display:flex; align-items:center; gap:18px; cursor:pointer; text-align:left;
+    box-shadow:0 8px 0 rgba(0,40,60,0.18); width:100%;
+  }
+  .game-card:active{ transform:translateY(4px); box-shadow:0 4px 0 rgba(0,40,60,0.18); }
+  .game-emoji{ font-size:44px; width:60px; text-align:center; }
+  .game-info{ flex:1; }
+  .game-name{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:21px; color:var(--ink); }
+  .game-tagline{ font-size:13px; color:#6B7C8C; font-weight:600; margin-top:3px; }
+
+  /* Levels screen */
+  .screen-back{
+    align-self:flex-start; border:none; background:rgba(255,255,255,0.25); color:#fff; font-family:'Baloo 2', sans-serif;
+    font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; cursor:pointer;
+  }
+  .level-list{ width:100%; display:flex; flex-direction:column; gap:14px; margin-top:2px; }
   .level-card{
     background:var(--cloud); border:none; border-radius:22px; padding:18px 20px;
     display:flex; align-items:center; gap:16px; cursor:pointer; text-align:left;
@@ -66,6 +83,7 @@
   .say-btn{ border:none; background:var(--sky-deep); color:#fff; font-family:'Baloo 2', sans-serif; font-weight:700; font-size:15px; padding:10px 18px; border-radius:999px; display:flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 4px 0 rgba(0,0,0,0.15); }
   .say-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.15); }
 
+  /* Spell It! mode */
   .slots{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; min-height:48px; }
   .slot{ width:38px;height:44px; border-radius:9px; border:3px solid #D9E4EC; display:flex;align-items:center;justify-content:center; font-family:'Baloo 2', sans-serif; font-weight:800; font-size:21px; color:var(--ink); background:#F5F9FB; }
   .slot.filled{ border-color:var(--leaf); background:#E7FBF4; }
@@ -76,6 +94,23 @@
   .tile.used{ visibility:hidden; }
   .tile.shake{ animation:shake .4s ease; }
   @keyframes shake{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  /* Pick It! mode */
+  .pick-options{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:300px; }
+  .pick-option{
+    border:none; border-radius:14px; padding:14px 16px; width:100%;
+    font-family:'Baloo 2', sans-serif; font-weight:800; font-size:18px;
+    cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.18); text-align:center;
+  }
+  .pick-option:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.18); }
+  .pick-option.shake{ animation:shake .4s ease; }
+  .pick-option.pc0{ background:var(--coral); color:#fff; }
+  .pick-option.pc1{ background:var(--sky-deep); color:#fff; }
+  .pick-option.pc2{ background:var(--violet); color:#fff; }
+  .pick-option.pc3{ background:var(--sun); color:var(--ink); }
+  .pick-option.correct{ background:var(--leaf); color:#fff; }
+  .pick-option.dim{ opacity:0.4; }
+  .pick-option.locked{ pointer-events:none; }
 
   .celebrate{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:21px; color:var(--leaf); min-height:28px; text-align:center; }
   .next-btn, .home-btn, .redo-btn{ border:none; color:#fff; font-family:'Baloo 2', sans-serif; font-weight:700; font-size:15px; padding:12px 20px; border-radius:999px; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.15); display:none; }
@@ -93,10 +128,18 @@
 <body>
 <div class="wrap">
 
-  <!-- HOME SCREEN -->
-  <div id="homeScreen">
-    <h1>Spell It! 🐣</h1>
-    <div class="tagline">Pick a level to start spelling</div>
+  <!-- GAMES SCREEN -->
+  <div id="gamesScreen">
+    <h1>Let's Play! 🎈</h1>
+    <div class="tagline">Choose a game to start</div>
+    <div class="game-list" id="gameList"></div>
+  </div>
+
+  <!-- LEVELS SCREEN -->
+  <div id="levelScreen" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
+    <button class="screen-back" id="gamesBackBtn">← Games</button>
+    <h1 id="levelScreenTitle">Spell It! 🐣</h1>
+    <div class="tagline" id="levelScreenTagline">Pick a level to start spelling</div>
     <div class="level-list" id="levelList"></div>
   </div>
 
@@ -111,8 +154,16 @@
       <div class="picture-frame" id="pictureFrame">🐱</div>
       <button class="say-btn" id="sayBtn" aria-label="Hear the word">🔊 Hear it again</button>
       <div id="soundHint" class="hidden" style="font-size:12px; color:#6B7C8C; font-weight:600; text-align:center; margin-top:-8px;">No sound? Check your device's volume and text‑to‑speech settings.</div>
-      <div class="slots" id="slots"></div>
-      <div class="tiles" id="tiles"></div>
+
+      <div id="spellArea">
+        <div class="slots" id="slots"></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+
+      <div id="pickArea" class="hidden">
+        <div class="pick-options" id="pickOptions"></div>
+      </div>
+
       <div class="celebrate" id="celebrate"></div>
       <div style="display:flex; gap:10px;">
         <button class="next-btn" id="nextBtn">Next word →</button>
@@ -127,6 +178,13 @@
 <script>
 (function(){
   var ROUND_SIZE = 6;
+  var PICK_OPTION_COUNT = 5;
+
+  var GAMES = [
+    { id:'spell', name:'Spell It!', emoji:'🐣', tagline:'Tap the letters in order to spell the word' },
+    { id:'pick', name:'Pick It!', emoji:'🦉', tagline:'Listen, then pick the matching word' }
+  ];
+
   var LEVELS = [
     { id:'easy', name:'Easy', sub:'3-letter words', emoji:'🌱',
       words:[{word:'cat',emoji:'🐱'},{word:'dog',emoji:'🐶'},{word:'cow',emoji:'🐮'},{word:'pig',emoji:'🐷'},{word:'hen',emoji:'🐔'},{word:'owl',emoji:'🦉'},{word:'bat',emoji:'🦇'},{word:'fox',emoji:'🦊'},{word:'ant',emoji:'🐜'},{word:'bee',emoji:'🐝'},{word:'bug',emoji:'🐛'},{word:'cub',emoji:'🐻'},{word:'ram',emoji:'🐏'},{word:'ewe',emoji:'🐑'},{word:'rat',emoji:'🐀'},{word:'ape',emoji:'🦍'},{word:'koi',emoji:'🐠'},{word:'fly',emoji:'🪰'},{word:'cod',emoji:'🐟'},{word:'jay',emoji:'🐦'},{word:'doe',emoji:'🦌'},{word:'yak',emoji:'🐃'},{word:'boa',emoji:'🐍'},{word:'bed',emoji:'🛏️'},{word:'box',emoji:'📦'},{word:'bin',emoji:'🗑️'},{word:'can',emoji:'🥫'},{word:'cup',emoji:'☕'},{word:'jar',emoji:'🫙'},{word:'key',emoji:'🔑'},{word:'mop',emoji:'🧹'},{word:'net',emoji:'🥅'},{word:'pan',emoji:'🍳'},{word:'pin',emoji:'📌'},{word:'tub',emoji:'🛁'},{word:'van',emoji:'🚐'},{word:'bow',emoji:'🎀'},{word:'saw',emoji:'🪚'},{word:'bag',emoji:'👜'},{word:'toy',emoji:'🧸'},{word:'rod',emoji:'🎣'},{word:'pen',emoji:'🖊️'},{word:'tie',emoji:'👔'},{word:'axe',emoji:'🪓'},{word:'map',emoji:'🗺️'},{word:'egg',emoji:'🥚'},{word:'ham',emoji:'🍖'},{word:'nut',emoji:'🥜'},{word:'pea',emoji:'🫛'},{word:'pie',emoji:'🥧'},{word:'yam',emoji:'🍠'},{word:'cob',emoji:'🌽'},{word:'tea',emoji:'🍵'},{word:'sun',emoji:'☀️'},{word:'sea',emoji:'🌊'},{word:'ice',emoji:'🧊'},{word:'log',emoji:'🪵'},{word:'web',emoji:'🕸️'},{word:'fog',emoji:'🌫️'},{word:'gem',emoji:'💎'},{word:'ivy',emoji:'🌿'},{word:'oak',emoji:'🌳'},{word:'bud',emoji:'🌱'},{word:'bus',emoji:'🚌'},{word:'car',emoji:'🚗'},{word:'cab',emoji:'🚕'},{word:'jet',emoji:'✈️'},{word:'ski',emoji:'🎿'},{word:'arm',emoji:'💪'},{word:'ear',emoji:'👂'},{word:'eye',emoji:'👁️'},{word:'leg',emoji:'🦵'},{word:'lip',emoji:'👄'},{word:'hat',emoji:'🎩'},{word:'cap',emoji:'🧢'}] },
@@ -136,9 +194,10 @@
       words:[{word:'rabbit',emoji:'🐰'},{word:'turtle',emoji:'🐢'},{word:'dolphin',emoji:'🐬'},{word:'elephant',emoji:'🐘'},{word:'giraffe',emoji:'🦒'},{word:'penguin',emoji:'🐧'},{word:'monkey',emoji:'🐒'},{word:'spider',emoji:'🕷️'},{word:'hamster',emoji:'🐹'},{word:'chicken',emoji:'🐔'},{word:'gorilla',emoji:'🦍'},{word:'octopus',emoji:'🐙'},{word:'jellyfish',emoji:'🪼'},{word:'scorpion',emoji:'🦂'},{word:'crocodile',emoji:'🐊'},{word:'kangaroo',emoji:'🦘'},{word:'squirrel',emoji:'🐿️'},{word:'raccoon',emoji:'🦝'},{word:'hedgehog',emoji:'🦔'},{word:'flamingo',emoji:'🦩'},{word:'peacock',emoji:'🦚'},{word:'ladybug',emoji:'🐞'},{word:'butterfly',emoji:'🦋'},{word:'caterpillar',emoji:'🐛'},{word:'lobster',emoji:'🦞'},{word:'walrus',emoji:'🦭'},{word:'dinosaur',emoji:'🦕'},{word:'unicorn',emoji:'🦄'},{word:'reindeer',emoji:'🦌'},{word:'buffalo',emoji:'🐃'},{word:'avocado',emoji:'🥑'},{word:'popcorn',emoji:'🍿'},{word:'sandwich',emoji:'🥪'},{word:'pancake',emoji:'🥞'},{word:'broccoli',emoji:'🥦'},{word:'mushroom',emoji:'🍄'},{word:'pumpkin',emoji:'🎃'},{word:'coconut',emoji:'🥥'},{word:'pretzel',emoji:'🥨'},{word:'waffle',emoji:'🧇'},{word:'noodle',emoji:'🍜'},{word:'cookie',emoji:'🍪'},{word:'cheese',emoji:'🧀'},{word:'carrot',emoji:'🥕'},{word:'potato',emoji:'🥔'},{word:'tomato',emoji:'🍅'},{word:'lettuce',emoji:'🥬'},{word:'peanut',emoji:'🥜'},{word:'pickle',emoji:'🥒'},{word:'rainbow',emoji:'🌈'},{word:'balloon',emoji:'🎈'},{word:'umbrella',emoji:'☂️'},{word:'bicycle',emoji:'🚲'},{word:'airplane',emoji:'✈️'},{word:'helicopter',emoji:'🚁'},{word:'mountain',emoji:'⛰️'},{word:'volcano',emoji:'🌋'},{word:'thunder',emoji:'⚡'},{word:'flower',emoji:'🌸'},{word:'forest',emoji:'🌲'},{word:'desert',emoji:'🏜️'},{word:'island',emoji:'🏝️'},{word:'bridge',emoji:'🌉'},{word:'castle',emoji:'🏰'},{word:'rocket',emoji:'🚀'},{word:'basket',emoji:'🧺'},{word:'window',emoji:'🪟'},{word:'guitar',emoji:'🎸'},{word:'violin',emoji:'🎻'},{word:'trumpet',emoji:'🎺'},{word:'laptop',emoji:'💻'},{word:'pencil',emoji:'✏️'},{word:'crayon',emoji:'🖍️'},{word:'snowman',emoji:'⛄'},{word:'sunset',emoji:'🌇'}] }
   ];
 
-  var STORAGE_KEY = 'spellit_progress_v2';
+  var STORAGE_KEY = 'littlelearners_progress_v3';
+  var LEGACY_SPELL_KEY = 'spellit_progress_v2';
   var progressData = {};
-  var currentLevel = null, idx = 0, answer = [], sessionWords = [];
+  var currentGame = null, currentLevel = null, idx = 0, answer = [], sessionWords = [];
   // When running inside the Android app shell, window.AndroidTTS is injected by
   // MainActivity before this page loads, and speech goes through Android's native
   // TextToSpeech engine instead (Android's WebView does not implement the browser
@@ -159,17 +218,25 @@
   document.addEventListener('pointerdown', unlockAudioOnce, { once:true });
   document.addEventListener('touchstart', unlockAudioOnce, { once:true, passive:true });
 
-  var homeScreen = document.getElementById('homeScreen');
+  var gamesScreen = document.getElementById('gamesScreen');
+  var levelScreen = document.getElementById('levelScreen');
   var gameScreen = document.getElementById('gameScreen');
+  var gameListEl = document.getElementById('gameList');
   var levelListEl = document.getElementById('levelList');
+  var levelScreenTitle = document.getElementById('levelScreenTitle');
+  var levelScreenTagline = document.getElementById('levelScreenTagline');
   var pictureFrame = document.getElementById('pictureFrame');
+  var spellArea = document.getElementById('spellArea');
+  var pickArea = document.getElementById('pickArea');
   var slotsEl = document.getElementById('slots');
   var tilesEl = document.getElementById('tiles');
+  var pickOptionsEl = document.getElementById('pickOptions');
   var celebrateEl = document.getElementById('celebrate');
   var nextBtn = document.getElementById('nextBtn');
   var redoBtn = document.getElementById('redoBtn');
   var homeBtn = document.getElementById('homeBtn');
   var backBtn = document.getElementById('backBtn');
+  var gamesBackBtn = document.getElementById('gamesBackBtn');
   var sayBtn = document.getElementById('sayBtn');
   var progressEl = document.getElementById('progress');
   var starCountEl = document.getElementById('starCount');
@@ -177,22 +244,53 @@
   function loadProgress(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
-      if(raw) progressData = JSON.parse(raw) || {};
+      if(raw){ progressData = JSON.parse(raw) || {}; return; }
+      // One-time migration from the original Spell It!-only progress format.
+      var legacyRaw = localStorage.getItem(LEGACY_SPELL_KEY);
+      if(legacyRaw){
+        var legacy = JSON.parse(legacyRaw) || {};
+        progressData = { spell: legacy };
+      }
     }catch(e){ progressData = {}; }
   }
   function saveProgress(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData)); }catch(e){}
   }
-  function levelStars(levelId){
-    return (progressData[levelId] && progressData[levelId].stars) || 0;
+  function levelStars(gameId, levelId){
+    return (progressData[gameId] && progressData[gameId][levelId] && progressData[gameId][levelId].stars) || 0;
   }
 
-  function renderHome(){
+  function renderGames(){
+    gameListEl.innerHTML = '';
+    GAMES.forEach(function(g){
+      var btn = document.createElement('button');
+      btn.className = 'game-card';
+      btn.innerHTML =
+        '<div class="game-emoji">' + g.emoji + '</div>' +
+        '<div class="game-info">' +
+          '<div class="game-name">' + g.name + '</div>' +
+          '<div class="game-tagline">' + g.tagline + '</div>' +
+        '</div>';
+      btn.addEventListener('click', function(){ openGame(g); });
+      gameListEl.appendChild(btn);
+    });
+  }
+
+  function openGame(g){
+    currentGame = g;
+    levelScreenTitle.textContent = g.name + ' ' + g.emoji;
+    levelScreenTagline.textContent = g.id === 'pick' ? 'Pick a level to start picking' : 'Pick a level to start spelling';
+    gamesScreen.classList.add('hidden');
+    levelScreen.classList.remove('hidden');
+    renderLevels();
+  }
+
+  function renderLevels(){
     levelListEl.innerHTML = '';
     LEVELS.forEach(function(lv){
       var btn = document.createElement('button');
       btn.className = 'level-card level-' + lv.id;
-      var stars = levelStars(lv.id);
+      var stars = levelStars(currentGame.id, lv.id);
       var roundSize = Math.min(ROUND_SIZE, lv.words.length);
       btn.innerHTML =
         '<div class="level-emoji">' + lv.emoji + '</div>' +
@@ -211,21 +309,30 @@
     var roundSize = Math.min(ROUND_SIZE, lv.words.length);
     sessionWords = shuffle(lv.words).slice(0, roundSize);
     idx = 0;
-    homeScreen.classList.add('hidden');
+    levelScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
+    spellArea.classList.toggle('hidden', currentGame.id !== 'spell');
+    pickArea.classList.toggle('hidden', currentGame.id !== 'pick');
     loadWord();
   }
 
-  function goHome(){
+  function goLevels(){
     try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
     gameScreen.classList.add('hidden');
-    homeScreen.classList.remove('hidden');
-    renderHome();
+    levelScreen.classList.remove('hidden');
+    renderLevels();
+  }
+
+  function goGames(){
+    try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
+    levelScreen.classList.add('hidden');
+    gamesScreen.classList.remove('hidden');
+    renderGames();
   }
 
   // queue=true appends after whatever is currently speaking instead of cutting it off.
-  // Used when the word-complete message follows right after the last letter's own
-  // announcement, so that letter isn't interrupted mid-word.
+  // Used when the word-complete message follows right after the last letter's (or
+  // picked word's) own announcement, so it isn't interrupted mid-way.
   function speak(text, queue){
     if(!speechSupported) return;
     if(hasNativeTTS){
@@ -261,7 +368,7 @@
       d.className = 'dot' + (i < idx ? ' done' : '') + (i === idx ? ' current' : '');
       progressEl.appendChild(d);
     });
-    starCountEl.textContent = '⭐ ' + levelStars(currentLevel.id) + ' / ' + sessionWords.length;
+    starCountEl.textContent = '⭐ ' + levelStars(currentGame.id, currentLevel.id) + ' / ' + sessionWords.length;
   }
 
   function loadWord(){
@@ -276,6 +383,17 @@
     void pictureFrame.offsetWidth;
     pictureFrame.classList.add('bump');
 
+    if(currentGame.id === 'pick'){
+      renderPickOptions(w);
+    } else {
+      renderSpellTiles(w);
+    }
+
+    renderProgressDots();
+    speak(w.word);
+  }
+
+  function renderSpellTiles(w){
     slotsEl.innerHTML = '';
     for(var i = 0; i < w.word.length; i++){
       var s = document.createElement('div');
@@ -292,9 +410,6 @@
       btn.addEventListener('click', function(){ handleTap(letter, btn); });
       tilesEl.appendChild(btn);
     });
-
-    renderProgressDots();
-    speak(w.word);
   }
 
   function handleTap(letter, btn){
@@ -315,10 +430,43 @@
     }
   }
 
+  function renderPickOptions(w){
+    var pool = currentLevel.words.filter(function(candidate){ return candidate.word !== w.word; });
+    var distractors = shuffle(pool).slice(0, PICK_OPTION_COUNT - 1);
+    var options = shuffle([w].concat(distractors));
+
+    pickOptionsEl.innerHTML = '';
+    options.forEach(function(option, i){
+      var btn = document.createElement('button');
+      btn.className = 'pick-option pc' + (i % 4);
+      btn.textContent = option.word;
+      btn.addEventListener('click', function(){ handlePick(option.word, btn); });
+      pickOptionsEl.appendChild(btn);
+    });
+  }
+
+  function handlePick(word, btn){
+    var w = sessionWords[idx];
+    if(word === w.word){
+      speak(word);
+      btn.classList.add('correct');
+      Array.prototype.forEach.call(pickOptionsEl.children, function(optBtn){
+        optBtn.classList.add('locked');
+        if(optBtn !== btn) optBtn.classList.add('dim');
+      });
+      onWordComplete();
+    } else {
+      btn.classList.remove('shake');
+      void btn.offsetWidth;
+      btn.classList.add('shake');
+    }
+  }
+
   function onWordComplete(){
     var lv = currentLevel;
-    if(!progressData[lv.id]) progressData[lv.id] = { stars:0 };
-    progressData[lv.id].stars = Math.min(sessionWords.length, progressData[lv.id].stars + 1);
+    if(!progressData[currentGame.id]) progressData[currentGame.id] = {};
+    if(!progressData[currentGame.id][lv.id]) progressData[currentGame.id][lv.id] = { stars:0 };
+    progressData[currentGame.id][lv.id].stars = Math.min(sessionWords.length, progressData[currentGame.id][lv.id].stars + 1);
 
     var msgs = ['Great job! 🎉', 'You did it! ⭐', 'Super speller! 🌟', 'Awesome! 🎈'];
     celebrateEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
@@ -364,11 +512,12 @@
   sayBtn.addEventListener('click', function(){ unlockAudioOnce(); speak(sessionWords[idx].word); });
   nextBtn.addEventListener('click', loadWord);
   redoBtn.addEventListener('click', function(){ startLevel(currentLevel); });
-  homeBtn.addEventListener('click', goHome);
-  backBtn.addEventListener('click', goHome);
+  homeBtn.addEventListener('click', goLevels);
+  backBtn.addEventListener('click', goLevels);
+  gamesBackBtn.addEventListener('click', goGames);
 
   loadProgress();
-  renderHome();
+  renderGames();
 })();
 </script>
 </body>
