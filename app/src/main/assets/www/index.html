@@ -506,7 +506,8 @@
   function handlePick(word, btn){
     var w = sessionWords[idx];
     if(word === w.word){
-      speak(word);
+      // onWordComplete() announces the word as part of its "word! Well done."
+      // message, so it isn't spoken again here first.
       btn.classList.add('correct');
       Array.prototype.forEach.call(pickOptionsEl.children, function(optBtn){
         optBtn.classList.add('locked');
@@ -536,7 +537,8 @@
   function handleAddPick(word, btn){
     var item = sessionWords[idx];
     if(word === item.answer){
-      speak(word);
+      // onWordComplete() announces the answer as part of its "word! Well done."
+      // message, so it isn't spoken again here first.
       if(blankChipEl){
         blankChipEl.textContent = word;
         blankChipEl.classList.add('filled');
