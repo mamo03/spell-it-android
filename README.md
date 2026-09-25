@@ -1,9 +1,9 @@
 # Spell It! — Android app
 
-A native Android wrapper around four word games for young kids, playable in **English or
-Danish** via a language switch on the games screen. For Spell It!, Pick It!, and See It!,
-a word is spoken aloud (See It! shows the word as text instead of a picture); Add It! reads
-a sentence aloud instead. Then:
+A native Android wrapper around four word games for young kids, playable in **English,
+Danish, or French** via a language switch on the games screen. For Spell It!, Pick It!,
+and See It!, a word is spoken aloud (See It! shows the word as text instead of a picture);
+Add It! reads a sentence aloud instead. Then:
 
 - **Spell It!** — tap letter tiles in order to spell the word.
 - **Pick It!** — pick the matching word out of 6 options.
@@ -18,12 +18,14 @@ keeps going until the player backs out, rather than ending after a fixed round.
 
 ## Language support
 
-The games screen has an English/Danish switch (🇬🇧/🇩🇰 pills). The choice is remembered
-between visits (`localStorage`) and applies to every game's UI text, word banks, Add It!
-sentences, and spoken audio. Danish has its own independently curated word bank per
-difficulty level — bucketed by actual Danish word length, not translated one-to-one from
-English — since word lengths differ between the two languages. The language switch only
-appears on the games screen, so there's no need to change language mid-round.
+The games screen has an English/Danish/French switch (🇬🇧/🇩🇰/🇫🇷 pills). The choice is
+remembered between visits (`localStorage`) and applies to every game's UI text, word banks,
+Add It! sentences, and spoken audio. Danish and French each have their own independently
+curated word bank per difficulty level — bucketed by actual word length in that language,
+not translated one-to-one from English — since word lengths differ between languages.
+Current word bank sizes (easy/medium/hard): English 179/150/126, Danish 88/105/103, French
+69/96/91. The language switch only appears on the games screen, so there's no need to
+change language mid-round.
 
 ## How it's built
 
@@ -38,9 +40,10 @@ appears on the games screen, so there's no need to change language mid-round.
   Android's WebView doesn't implement the browser's Web Speech API, so the page calls this
   native bridge when running inside the app, and falls back to `speechSynthesis` only when
   opened directly in a browser (so the same HTML file still works as a web page too). The
-  bridge's `speak(text, queue, lang)` takes a BCP-47 language tag ("en-US"/"da-DK") from the
-  page and switches the native TTS engine's voice to match, falling back gracefully if a
-  language's voice data isn't installed on the device.
+  bridge's `speak(text, queue, lang)` takes a BCP-47 language tag ("en-US"/"da-DK"/"fr-FR")
+  from the page and switches the native TTS engine's voice to match, falling back gracefully
+  if a language's voice data isn't installed on the device — adding another language is a
+  page-side change only, since the bridge just forwards whatever tag it's given.
 
 ## Getting the APK
 
