@@ -118,7 +118,7 @@
   /* Add It! mode */
   .sentence-card{ font-family:'Baloo 2', sans-serif; font-weight:700; font-size:18px; color:var(--ink); text-align:center; line-height:1.45; padding:2px 4px; }
   .blank-chip{ display:inline-block; min-width:70px; padding:2px 12px; border-bottom:3px dashed var(--coral); font-weight:800; color:var(--coral); }
-  .blank-chip.filled{ border-bottom:3px solid var(--leaf); color:var(--leaf); }
+  .blank-chip.filled{ border-bottom-color:transparent; color:var(--leaf); }
 
   .celebrate{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:19px; color:var(--leaf); min-height:22px; text-align:center; }
   .next-btn, .home-btn, .redo-btn{ border:none; color:#fff; font-family:'Baloo 2', sans-serif; font-weight:700; font-size:14px; padding:10px 18px; border-radius:999px; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.15); display:none; }
@@ -515,7 +515,10 @@
     sentenceCardEl.appendChild(document.createTextNode(parts[0]));
     var chip = document.createElement('span');
     chip.className = 'blank-chip';
-    chip.textContent = '____';
+    // A non-breaking space keeps the chip's height/min-width while empty; the
+    // dashed border-bottom alone marks the blank, so there's only one line
+    // under it (not one from underscore characters plus one from the border).
+    chip.textContent = ' ';
     sentenceCardEl.appendChild(chip);
     blankChipEl = chip;
     sentenceCardEl.appendChild(document.createTextNode(parts[1]));
