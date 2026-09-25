@@ -60,16 +60,14 @@
   .level-info{ flex:1; }
   .level-name{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:19px; color:var(--ink); }
   .level-sub{ font-size:13px; color:#6B7C8C; font-weight:600; margin-top:2px; }
-  .level-stars{ font-family:'Baloo 2', sans-serif; font-weight:700; color:var(--sun); font-size:14px; margin-top:6px; }
   .level-easy .level-emoji{ color:var(--leaf); }
 
   /* Game screen */
-  .top-bar{ width:100%; display:flex; align-items:center; justify-content:space-between; }
+  .top-bar{ width:100%; display:flex; align-items:center; }
   .back-btn{
     border:none; background:rgba(255,255,255,0.25); color:#fff; font-family:'Baloo 2', sans-serif;
     font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; cursor:pointer;
   }
-  .stars{ font-family:'Baloo 2', sans-serif; color:#fff; font-weight:700; font-size:14px; }
   .progress{ display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
   .dot{ width:13px;height:13px;border-radius:50%; background:rgba(255,255,255,0.35); border:2px solid rgba(255,255,255,0.6); transition:transform .25s ease, background .25s ease; }
   .dot.done{ background:var(--sun); border-color:var(--sun); transform:scale(1.15); }
@@ -157,7 +155,6 @@
   <div id="gameScreen" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
     <div class="top-bar">
       <button class="back-btn" id="backBtn">← Levels</button>
-      <div class="stars" id="starCount">⭐ 0 / 0</div>
     </div>
     <div class="progress" id="progress"></div>
     <div class="stage">
@@ -262,8 +259,6 @@
   var gamesBackBtn = document.getElementById('gamesBackBtn');
   var sayBtn = document.getElementById('sayBtn');
   var progressEl = document.getElementById('progress');
-  var starCountEl = document.getElementById('starCount');
-
   function loadProgress(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -278,9 +273,6 @@
   }
   function saveProgress(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData)); }catch(e){}
-  }
-  function levelStars(gameId, levelId){
-    return (progressData[gameId] && progressData[gameId][levelId] && progressData[gameId][levelId].stars) || 0;
   }
 
   function renderGames(){
@@ -313,15 +305,11 @@
     LEVELS.forEach(function(lv){
       var btn = document.createElement('button');
       btn.className = 'level-card level-' + lv.id;
-      var stars = levelStars(currentGame.id, lv.id);
-      var pool = currentGame.id === 'add' ? lv.sentences : lv.words;
-      var roundSize = Math.min(ROUND_SIZE, pool.length);
       btn.innerHTML =
         '<div class="level-emoji">' + lv.emoji + '</div>' +
         '<div class="level-info">' +
           '<div class="level-name">' + lv.name + '</div>' +
           '<div class="level-sub">' + lv.sub + '</div>' +
-          '<div class="level-stars">⭐ ' + stars + ' / ' + roundSize + '</div>' +
         '</div>';
       btn.addEventListener('click', function(){ startLevel(lv); });
       levelListEl.appendChild(btn);
@@ -395,7 +383,6 @@
       d.className = 'dot' + (i < idx ? ' done' : '') + (i === idx ? ' current' : '');
       progressEl.appendChild(d);
     });
-    starCountEl.textContent = '⭐ ' + levelStars(currentGame.id, currentLevel.id) + ' / ' + sessionWords.length;
   }
 
   function loadWord(){
