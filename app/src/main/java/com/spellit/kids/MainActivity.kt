@@ -9,6 +9,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import java.util.Locale
 
 /**
@@ -47,6 +49,15 @@ class MainActivity : AppCompatActivity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
+
+            // The app's palette is one deliberate bright design, not a light/dark pair.
+            // Some Android versions and manufacturers (Samsung's One UI in particular)
+            // otherwise auto-invert or re-tint page colors when the device is in system
+            // dark mode, which fights with our own CSS and can make text unreadable.
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
+            }
+
             webViewClient = WebViewClient()
             addJavascriptInterface(TtsBridge(), "AndroidTTS")
             loadUrl("file:///android_asset/www/index.html")

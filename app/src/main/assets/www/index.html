@@ -14,7 +14,11 @@
     padding-top:env(safe-area-inset-top,0px);
     padding-bottom:env(safe-area-inset-bottom,0px);
   }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#EAF4FA; } }
+  /* This is a single, deliberately bright, high-contrast palette for young kids —
+     not a dual light/dark theme. Text colors are paired with fixed card/slot
+     backgrounds throughout, so the palette intentionally does not follow the
+     device's system dark-mode setting (which previously made filled letter
+     slots render near-white text on a near-white background on some phones). */
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
