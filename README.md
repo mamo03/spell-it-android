@@ -18,14 +18,14 @@ keeps going until the player backs out, rather than ending after a fixed round.
 
 ## Language support
 
-The games screen has an English/Danish/French switch (🇬🇧/🇩🇰/🇫🇷 pills). The choice is
-remembered between visits (`localStorage`) and applies to every game's UI text, word banks,
-Add It! sentences, and spoken audio. Danish and French each have their own independently
-curated word bank per difficulty level — bucketed by actual word length in that language,
-not translated one-to-one from English — since word lengths differ between languages.
-Current word bank sizes (easy/medium/hard): English 179/150/126, Danish 88/105/103, French
-69/96/91. The language switch only appears on the games screen, so there's no need to
-change language mid-round.
+The games screen has an English/Danish/French switch, shown as a dropdown (🇬🇧 English /
+🇩🇰 Dansk / 🇫🇷 Français). The choice is remembered between visits (`localStorage`) and
+applies to every game's UI text, word banks, Add It! sentences, and spoken audio. Danish
+and French each have their own independently curated word bank per difficulty level —
+bucketed by actual word length in that language, not translated one-to-one from English —
+since word lengths differ between languages. Current word bank sizes (easy/medium/hard):
+English 198/200/170, Danish 121/147/135, French 101/134/121. The language switch only
+appears on the games screen, so there's no need to change language mid-round.
 
 ## How it's built
 
