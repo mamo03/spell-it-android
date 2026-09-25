@@ -223,14 +223,17 @@
     renderHome();
   }
 
-  function speak(text){
+  // queue=true appends after whatever is currently speaking instead of cutting it off.
+  // Used when the word-complete message follows right after the last letter's own
+  // announcement, so that letter isn't interrupted mid-word.
+  function speak(text, queue){
     if(!speechSupported) return;
     if(hasNativeTTS){
-      try{ window.AndroidTTS.speak(text); }catch(e){}
+      try{ window.AndroidTTS.speak(text, !!queue); }catch(e){}
       return;
     }
     try{
-      window.speechSynthesis.cancel();
+      if(!queue){ window.speechSynthesis.cancel(); }
       var u = new SpeechSynthesisUtterance(text);
       u.rate = 0.85; u.pitch = 1.1; u.volume = 1;
       var voices = window.speechSynthesis.getVoices();
@@ -319,7 +322,7 @@
 
     var msgs = ['Great job! 🎉', 'You did it! ⭐', 'Super speller! 🌟', 'Awesome! 🎈'];
     celebrateEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
-    speak(sessionWords[idx].word + '! Well done.');
+    speak(sessionWords[idx].word + '! Well done.', true);
     launchConfetti();
 
     if(idx < sessionWords.length - 1){

@@ -19,7 +19,7 @@ import java.util.Locale
  *
  * Android's WebView does not implement the Web Speech Synthesis API used by desktop
  * browsers (window.speechSynthesis returns no voices), so the page's JavaScript calls
- * window.AndroidTTS.speak(text) when this bridge is present, and falls back to
+ * window.AndroidTTS.speak(text, queue) when this bridge is present, and falls back to
  * speechSynthesis only when it isn't (e.g. when the same HTML is opened in a browser).
  */
 class MainActivity : AppCompatActivity() {
@@ -82,11 +82,18 @@ class MainActivity : AppCompatActivity() {
 
     /** Exposed to the page's JavaScript as window.AndroidTTS. */
     inner class TtsBridge {
+        /**
+         * queue=false interrupts whatever is currently speaking (a new word, "hear it
+         * again", or a freshly tapped letter). queue=true appends after it instead, used
+         * for the word-complete message so it doesn't cut off the last letter's own
+         * announcement, which is spoken an instant earlier by the same tap.
+         */
         @JavascriptInterface
-        fun speak(text: String) {
+        fun speak(text: String, queue: Boolean) {
             if (!ttsReady) return
             runOnUiThread {
-                tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "spellItUtterance")
+                val mode = if (queue) TextToSpeech.QUEUE_ADD else TextToSpeech.QUEUE_FLUSH
+                tts.speak(text, mode, null, "spellItUtterance")
             }
         }
     }
