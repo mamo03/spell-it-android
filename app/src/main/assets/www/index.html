@@ -44,6 +44,16 @@
   .game-name{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:21px; color:var(--ink); }
   .game-tagline{ font-size:13px; color:#6B7C8C; font-weight:600; margin-top:3px; }
 
+  /* Language switch (games screen only) */
+  .lang-switch{ display:flex; gap:10px; margin-top:2px; }
+  .lang-btn{
+    border:none; border-radius:999px; padding:8px 16px; font-family:'Baloo 2', sans-serif;
+    font-weight:700; font-size:13px; cursor:pointer; background:rgba(255,255,255,0.25); color:#fff;
+    box-shadow:0 4px 0 rgba(0,0,0,0.12);
+  }
+  .lang-btn.active{ background:#fff; color:var(--ink); box-shadow:0 4px 0 rgba(0,40,60,0.18); }
+  .lang-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
+
   /* Levels screen */
   .screen-back{
     align-self:flex-start; border:none; background:rgba(255,255,255,0.25); color:#fff; font-family:'Baloo 2', sans-serif;
@@ -144,8 +154,12 @@
 
   <!-- GAMES SCREEN -->
   <div id="gamesScreen">
-    <h1>Let's Play! 🎈</h1>
-    <div class="tagline">Choose a game to start</div>
+    <h1 id="gamesTitle">Let's Play! 🎈</h1>
+    <div class="tagline" id="gamesTagline">Choose a game to start</div>
+    <div class="lang-switch" id="langSwitch">
+      <button class="lang-btn" id="langEnBtn" data-lang="en">🇬🇧 English</button>
+      <button class="lang-btn" id="langDaBtn" data-lang="da">🇩🇰 Dansk</button>
+    </div>
     <div class="game-list" id="gameList"></div>
   </div>
 
@@ -200,15 +214,68 @@
   var PICK_OPTION_COUNT = 6;
   var SEE_OPTION_COUNT = 4;
 
-  var GAMES = [
-    { id:'spell', name:'Spell It!', emoji:'🐣', tagline:'Tap the letters in order to spell the word' },
-    { id:'pick', name:'Pick It!', emoji:'🦉', tagline:'Listen, then pick the matching word' },
-    { id:'add', name:'Add It!', emoji:'🧩', tagline:'Listen to the sentence and add the missing word' },
-    { id:'see', name:'See It!', emoji:'👀', tagline:'Read the word, then pick the matching picture' }
-  ];
-  var LEVEL_TAGLINE_VERB = { spell:'spelling', pick:'picking', add:'completing sentences', see:'picking pictures' };
+  var LANG_STORAGE_KEY = 'spellit_lang';
+  var LANG_TTS_CODE = { en:'en-US', da:'da-DK' };
+  var lang = 'en';
+  try{
+    var savedLang = localStorage.getItem(LANG_STORAGE_KEY);
+    if(savedLang === 'en' || savedLang === 'da') lang = savedLang;
+  }catch(e){}
 
-  var LEVELS = [
+  // All UI copy that isn't part of a word/sentence bank, keyed by language.
+  var STRINGS = {
+    en: {
+      gamesTitle: "Let's Play! \ud83c\udf88",
+      gamesTagline: 'Choose a game to start',
+      backToGames: '\u2190 Games',
+      backToLevels: '\u2190 Levels',
+      pickLevelPrefix: 'Pick a level to start ',
+      hearItAgain: '\ud83d\udd0a Hear it again',
+      hearWordAria: 'Hear the word',
+      soundHint: "No sound? Check your device's volume and text\u2011to\u2011speech settings.",
+      nextWord: 'Next word \u2192',
+      soundUnavailable: '\ud83d\udd07 Sound unavailable',
+      wellDone: '! Well done.',
+      celebrate: ['Great job! \ud83c\udf89', 'You did it! \u2b50', 'Super speller! \ud83c\udf1f', 'Awesome! \ud83c\udf88']
+    },
+    da: {
+      gamesTitle: 'Lad os lege! \ud83c\udf88',
+      gamesTagline: 'V\u00e6lg et spil for at starte',
+      backToGames: '\u2190 Spil',
+      backToLevels: '\u2190 Niveauer',
+      pickLevelPrefix: 'V\u00e6lg et niveau for at ',
+      hearItAgain: '\ud83d\udd0a H\u00f8r det igen',
+      hearWordAria: 'H\u00f8r ordet',
+      soundHint: 'Ingen lyd? Tjek din enheds lydstyrke og indstillinger for oplæsning.',
+      nextWord: 'N\u00e6ste ord \u2192',
+      soundUnavailable: '\ud83d\udd07 Lyd ikke tilg\u00e6ngelig',
+      wellDone: '! Flot klaret.',
+      celebrate: ['Flot klaret! \ud83c\udf89', 'Du gjorde det! \u2b50', 'Super stavehj\u00e6lper! \ud83c\udf1f', 'Fantastisk! \ud83c\udf88']
+    }
+  };
+
+  var GAMES_BY_LANG = {
+    en: [
+      { id:'spell', name:'Spell It!', emoji:'\ud83d\udc23', tagline:'Tap the letters in order to spell the word' },
+      { id:'pick', name:'Pick It!', emoji:'\ud83e\udd89', tagline:'Listen, then pick the matching word' },
+      { id:'add', name:'Add It!', emoji:'\ud83e\udde9', tagline:'Listen to the sentence and add the missing word' },
+      { id:'see', name:'See It!', emoji:'\ud83d\udc40', tagline:'Read the word, then pick the matching picture' }
+    ],
+    da: [
+      { id:'spell', name:'Stav Det!', emoji:'\ud83d\udc23', tagline:'Tryk p\u00e5 bogstaverne i r\u00e6kkef\u00f8lge for at stave ordet' },
+      { id:'pick', name:'V\u00e6lg Det!', emoji:'\ud83e\udd89', tagline:'Lyt, og v\u00e6lg s\u00e5 det rigtige ord' },
+      { id:'add', name:'Udfyld Det!', emoji:'\ud83e\udde9', tagline:'Lyt til s\u00e6tningen, og tilf\u00f8j det manglende ord' },
+      { id:'see', name:'Se Det!', emoji:'\ud83d\udc40', tagline:'L\u00e6s ordet, og v\u00e6lg s\u00e5 det rigtige billede' }
+    ]
+  };
+
+  var LEVEL_TAGLINE_VERB_BY_LANG = {
+    en: { spell:'spelling', pick:'picking', add:'completing sentences', see:'picking pictures' },
+    da: { spell:'stave', pick:'v\u00e6lge ord', add:'udfylde s\u00e6tninger', see:'v\u00e6lge billeder' }
+  };
+
+  var LEVELS_BY_LANG = {
+    en: [
     { id:'easy', name:'Easy', sub:'3-4 letter words', emoji:'🌱',
       words:[{word:'cat',emoji:'🐱'},{word:'dog',emoji:'🐶'},{word:'cow',emoji:'🐮'},{word:'pig',emoji:'🐷'},{word:'hen',emoji:'🐔'},{word:'owl',emoji:'🦉'},{word:'bat',emoji:'🦇'},{word:'fox',emoji:'🦊'},{word:'ant',emoji:'🐜'},{word:'bee',emoji:'🐝'},{word:'bug',emoji:'🐛'},{word:'cub',emoji:'🐻'},{word:'ram',emoji:'🐏'},{word:'ewe',emoji:'🐑'},{word:'rat',emoji:'🐀'},{word:'ape',emoji:'🦍'},{word:'koi',emoji:'🐠'},{word:'fly',emoji:'🪰'},{word:'cod',emoji:'🐟'},{word:'jay',emoji:'🐦'},{word:'doe',emoji:'🦌'},{word:'yak',emoji:'🐃'},{word:'boa',emoji:'🐍'},{word:'bed',emoji:'🛏️'},{word:'box',emoji:'📦'},{word:'bin',emoji:'🗑️'},{word:'can',emoji:'🥫'},{word:'cup',emoji:'☕'},{word:'jar',emoji:'🫙'},{word:'key',emoji:'🔑'},{word:'mop',emoji:'🧹'},{word:'net',emoji:'🥅'},{word:'pan',emoji:'🍳'},{word:'pin',emoji:'📌'},{word:'tub',emoji:'🛁'},{word:'van',emoji:'🚐'},{word:'bow',emoji:'🎀'},{word:'saw',emoji:'🪚'},{word:'bag',emoji:'👜'},{word:'toy',emoji:'🧸'},{word:'rod',emoji:'🎣'},{word:'pen',emoji:'🖊️'},{word:'tie',emoji:'👔'},{word:'axe',emoji:'🪓'},{word:'map',emoji:'🗺️'},{word:'egg',emoji:'🥚'},{word:'ham',emoji:'🍖'},{word:'nut',emoji:'🥜'},{word:'pea',emoji:'🫛'},{word:'pie',emoji:'🥧'},{word:'yam',emoji:'🍠'},{word:'cob',emoji:'🌽'},{word:'tea',emoji:'🍵'},{word:'sun',emoji:'☀️'},{word:'sea',emoji:'🌊'},{word:'ice',emoji:'🧊'},{word:'log',emoji:'🪵'},{word:'web',emoji:'🕸️'},{word:'fog',emoji:'🌫️'},{word:'gem',emoji:'💎'},{word:'ivy',emoji:'🌿'},{word:'oak',emoji:'🌳'},{word:'bud',emoji:'🌱'},{word:'bus',emoji:'🚌'},{word:'car',emoji:'🚗'},{word:'cab',emoji:'🚕'},{word:'jet',emoji:'✈️'},{word:'ski',emoji:'🎿'},{word:'arm',emoji:'💪'},{word:'ear',emoji:'👂'},{word:'eye',emoji:'👁️'},{word:'leg',emoji:'🦵'},{word:'lip',emoji:'👄'},{word:'hat',emoji:'🎩'},{word:'cap',emoji:'🧢'},{word:'wolf',emoji:'🐺'},{word:'lion',emoji:'🦁'},{word:'seal',emoji:'🦭'},{word:'crab',emoji:'🦀'},{word:'clam',emoji:'🐚'},{word:'worm',emoji:'🪱'},{word:'duck',emoji:'🦆'},{word:'swan',emoji:'🦢'},{word:'dove',emoji:'🕊️'},{word:'frog',emoji:'🐸'},{word:'kite',emoji:'🪁'},{word:'book',emoji:'📖'},{word:'ball',emoji:'⚽'},{word:'bike',emoji:'🚲'},{word:'sock',emoji:'🧦'},{word:'shoe',emoji:'👞'},{word:'coat',emoji:'🧥'},{word:'moon',emoji:'🌙'},{word:'star',emoji:'⭐'},{word:'pine',emoji:'🌲'},{word:'leaf',emoji:'🍃'},{word:'rose',emoji:'🌹'},{word:'rain',emoji:'🌧️'},{word:'snow',emoji:'❄️'},{word:'wind',emoji:'💨'},{word:'cake',emoji:'🎂'},{word:'milk',emoji:'🥛'},{word:'soup',emoji:'🍲'},{word:'rice',emoji:'🍚'},{word:'kiwi',emoji:'🥝'},{word:'pear',emoji:'🍐'},{word:'taco',emoji:'🌮'},{word:'fork',emoji:'🍴'},{word:'lamp',emoji:'💡'},{word:'door',emoji:'🚪'},{word:'mask',emoji:'🎭'},{word:'ring',emoji:'💍'},{word:'wand',emoji:'🪄'},{word:'drum',emoji:'🥁'},{word:'flag',emoji:'🚩'},{word:'lock',emoji:'🔒'},{word:'sofa',emoji:'🛋️'},{word:'vase',emoji:'🏺'},{word:'bell',emoji:'🔔'},{word:'gift',emoji:'🎁'},{word:'sled',emoji:'🛷'},{word:'reef',emoji:'🪸'},{word:'mice',emoji:'🐭'},{word:'tent',emoji:'⛺'},{word:'vest',emoji:'🦺'},{word:'disc',emoji:'💿'},{word:'fire',emoji:'🔥'},{word:'rock',emoji:'🪨'},{word:'palm',emoji:'🌴'},{word:'nest',emoji:'🪺'},{word:'salt',emoji:'🧂'},{word:'soda',emoji:'🥤'},{word:'boat',emoji:'⛵'},{word:'ship',emoji:'🚢'},{word:'cart',emoji:'🛒'},{word:'jeep',emoji:'🚙'},{word:'nose',emoji:'👃'},{word:'hand',emoji:'✋'},{word:'foot',emoji:'🦶'},{word:'fan',emoji:'🪭'},{word:'nap',emoji:'😴'},{word:'pad',emoji:'📝'},{word:'pit',emoji:'🕳️'},{word:'sax',emoji:'🎷'},{word:'jog',emoji:'🏃'},{word:'gas',emoji:'⛽'},{word:'jug',emoji:'🫗'},{word:'lab',emoji:'🧪'},{word:'pot',emoji:'🪴'},{word:'tap',emoji:'🚰'},{word:'hay',emoji:'🌾'},{word:'elf',emoji:'🧝'},{word:'hut',emoji:'🛖'},{word:'tag',emoji:'🏷️'},{word:'bath',emoji:'🛀'},{word:'soap',emoji:'🧼'},{word:'rope',emoji:'🪢'},{word:'drop',emoji:'💧'},{word:'doll',emoji:'🪆'},{word:'goat',emoji:'🐐'},{word:'girl',emoji:'👧'},{word:'horn',emoji:'📯'},{word:'mail',emoji:'✉️'},{word:'pony',emoji:'🐴'},{word:'pool',emoji:'🏊'},{word:'pail',emoji:'🪣'},{word:'comb',emoji:'🪮'},{word:'bolt',emoji:'🔩'},{word:'wing',emoji:'🪽'},{word:'surf',emoji:'🏄'},{word:'boot',emoji:'👢'},{word:'coin',emoji:'🪙'},{word:'dice',emoji:'🎲'},{word:'dish',emoji:'🍽️'},{word:'fist',emoji:'✊'},{word:'germ',emoji:'🦠'},{word:'gold',emoji:'🥇'},{word:'wall',emoji:'🧱'},{word:'yarn',emoji:'🧶'}],
       sentences:[{text:'The ___ says meow.',answer:'cat'},{text:'My ___ likes to bark.',answer:'dog'},{text:'A ___ gives us milk.',answer:'cow'},{text:'The ___ rolls in the mud.',answer:'pig'},{text:'The ___ lays an egg.',answer:'hen'},{text:'An ___ hoots at night.',answer:'owl'},{text:'A ___ sleeps upside down in a cave.',answer:'bat'},{text:'The ___ has a big bushy tail.',answer:'fox'},{text:'A tiny ___ carries crumbs of food.',answer:'ant'},{text:'A busy ___ makes honey.',answer:'bee'},{text:'I keep my toys in a ___.',answer:'box'},{text:'I drink water from a ___.',answer:'cup'},{text:'Mom keeps cookies in a ___.',answer:'jar'},{text:'I open the door with a ___.',answer:'key'},{text:'Dad cooks eggs in a ___.',answer:'pan'},{text:'I take a bath in the ___.',answer:'tub'},{text:'We ride to school in a ___.',answer:'van'},{text:'I tie my hair with a ___.',answer:'bow'},{text:'I carry my books in a ___.',answer:'bag'},{text:'I love playing with my new ___.',answer:'toy'},{text:'I write my name with a ___.',answer:'pen'},{text:'Grandpa wears a ___ to work.',answer:'tie'},{text:'We use a ___ to find our way.',answer:'map'},{text:'The hen just laid an ___.',answer:'egg'},{text:'I like peanut ___ on toast.',answer:'nut'},{text:'Today the ___ is shining bright.',answer:'sun'},{text:'We went swimming in the ___.',answer:'sea'},{text:'I put ___ in my drink.',answer:'ice'},{text:'A spider spins a sticky ___.',answer:'web'},{text:'A diamond is a shiny ___.',answer:'gem'},{text:'We ride the ___ to town.',answer:'bus'},{text:'Dad drives the ___ to work.',answer:'car'},{text:'A ___ flies high in the sky.',answer:'jet'},{text:'I wear a warm ___ on my head.',answer:'hat'},{text:'A hungry ___ howls at the moon.',answer:'wolf'},{text:'The ___ is known as the king of the jungle.',answer:'lion'},{text:'A ___ swims and claps its flippers.',answer:'seal'},{text:'A ___ walks sideways on the beach.',answer:'crab'},{text:'I fly my colorful ___ in the wind.',answer:'kite'},{text:'I love to read my favorite ___.',answer:'book'},{text:'We kick the ___ across the field.',answer:'ball'},{text:'I ride my ___ to the park.',answer:'bike'},{text:'I wear a cozy ___ on my foot.',answer:'sock'},{text:'At night I can see a bright ___.',answer:'moon'},{text:'I wish upon a twinkling ___.',answer:'star'},{text:'A ___ falls from the tree in autumn.',answer:'leaf'},{text:'Mom gave me a pretty red ___.',answer:'rose'},{text:'We eat sweet ___ on my birthday.',answer:'cake'},{text:'I drink cold ___ with my cookies.',answer:'milk'},{text:'I use a ___ to eat my food.',answer:'fork'},{text:'I turn on the ___ before bedtime.',answer:'lamp'},{text:'Please remember to close the ___.',answer:'door'},{text:'Mom wears a shiny wedding ___.',answer:'ring'},{text:'I love the loud beat of the ___.',answer:'drum'},{text:'I sink into the soft ___.',answer:'sofa'},{text:'I give my best friend a birthday ___.',answer:'gift'},{text:'We slide down the snowy hill on a ___.',answer:'sled'},{text:'Please pass the ___ for my food.',answer:'salt'},{text:'We sail across the sea on a little ___.',answer:'boat'},{text:'A big ___ crosses the wide ocean.',answer:'ship'},{text:'I smell flowers with my ___.',answer:'nose'},{text:'I wave my ___ to say hello.',answer:'hand'},{text:'I wear my new shoes on my ___.',answer:'foot'}] },
@@ -218,7 +285,20 @@
     { id:'hard', name:'Hard', sub:'7+ letter words', emoji:'🌳',
       words:[{word:'elephant',emoji:'🐘'},{word:'giraffe',emoji:'🦒'},{word:'penguin',emoji:'🐧'},{word:'hamster',emoji:'🐹'},{word:'chicken',emoji:'🐔'},{word:'gorilla',emoji:'🦍'},{word:'octopus',emoji:'🐙'},{word:'jellyfish',emoji:'🪼'},{word:'scorpion',emoji:'🦂'},{word:'crocodile',emoji:'🐊'},{word:'kangaroo',emoji:'🦘'},{word:'squirrel',emoji:'🐿️'},{word:'raccoon',emoji:'🦝'},{word:'hedgehog',emoji:'🦔'},{word:'flamingo',emoji:'🦩'},{word:'peacock',emoji:'🦚'},{word:'ladybug',emoji:'🐞'},{word:'butterfly',emoji:'🦋'},{word:'caterpillar',emoji:'🐛'},{word:'lobster',emoji:'🦞'},{word:'dinosaur',emoji:'🦕'},{word:'unicorn',emoji:'🦄'},{word:'reindeer',emoji:'🦌'},{word:'buffalo',emoji:'🐃'},{word:'avocado',emoji:'🥑'},{word:'popcorn',emoji:'🍿'},{word:'sandwich',emoji:'🥪'},{word:'pancake',emoji:'🥞'},{word:'broccoli',emoji:'🥦'},{word:'mushroom',emoji:'🍄'},{word:'pumpkin',emoji:'🎃'},{word:'coconut',emoji:'🥥'},{word:'pretzel',emoji:'🥨'},{word:'rainbow',emoji:'🌈'},{word:'balloon',emoji:'🎈'},{word:'umbrella',emoji:'☂️'},{word:'bicycle',emoji:'🚲'},{word:'airplane',emoji:'✈️'},{word:'helicopter',emoji:'🚁'},{word:'mountain',emoji:'⛰️'},{word:'volcano',emoji:'🌋'},{word:'thunder',emoji:'⚡'},{word:'trumpet',emoji:'🎺'},{word:'snowman',emoji:'⛄'},{word:'dolphin',emoji:'🐬'},{word:'leopard',emoji:'🐆'},{word:'mosquito',emoji:'🦟'},{word:'lettuce',emoji:'🥬'},{word:'eggplant',emoji:'🍆'},{word:'zucchini',emoji:'🥒'},{word:'cupcake',emoji:'🧁'},{word:'pineapple',emoji:'🍍'},{word:'chocolate',emoji:'🍫'},{word:'backpack',emoji:'🎒'},{word:'suitcase',emoji:'🧳'},{word:'scissors',emoji:'✂️'},{word:'envelope',emoji:'✉️'},{word:'notebook',emoji:'📓'},{word:'calendar',emoji:'📅'},{word:'keyboard',emoji:'⌨️'},{word:'triangle',emoji:'🔺'},{word:'sneakers',emoji:'👟'},{word:'scooter',emoji:'🛴'},{word:'tractor',emoji:'🚜'},{word:'airport',emoji:'🛫'},{word:'building',emoji:'🏢'},{word:'hospital',emoji:'🏥'},{word:'library',emoji:'📚'},{word:'stadium',emoji:'🏟️'},{word:'tornado',emoji:'🌪️'},{word:'sunrise',emoji:'🌅'},{word:'diamond',emoji:'💎'},{word:'seashell',emoji:'🐚'},{word:'blueberry',emoji:'🫐'},{word:'hamburger',emoji:'🍔'},{word:'spaghetti',emoji:'🍝'},{word:'milkshake',emoji:'🥤'},{word:'strawberry',emoji:'🍓'},{word:'lollipop',emoji:'🍭'},{word:'telephone',emoji:'☎️'},{word:'sunglasses',emoji:'🕶️'},{word:'toothbrush',emoji:'🪥'},{word:'telescope',emoji:'🔭'},{word:'microscope',emoji:'🔬'},{word:'skateboard',emoji:'🛹'},{word:'motorcycle',emoji:'🏍️'},{word:'ambulance',emoji:'🚑'},{word:'spaceship',emoji:'🛸'},{word:'astronaut',emoji:'👨‍🚀'},{word:'mailbox',emoji:'📫'},{word:'fountain',emoji:'⛲'},{word:'raindrop',emoji:'💧'},{word:'snowflake',emoji:'❄️'},{word:'chameleon',emoji:'🦎'},{word:'orangutan',emoji:'🦧'},{word:'rhinoceros',emoji:'🦏'},{word:'hippopotamus',emoji:'🦛'},{word:'chimpanzee',emoji:'🐒'},{word:'feather',emoji:'🪶'},{word:'sweater',emoji:'🧥'},{word:'mermaid',emoji:'🧜'},{word:'gymnast',emoji:'🤸'},{word:'painting',emoji:'🖼️'},{word:'sailboat',emoji:'⛵'},{word:'treasure',emoji:'💰'},{word:'fireworks',emoji:'🎆'},{word:'accordion',emoji:'🪗'},{word:'calculator',emoji:'🧮'},{word:'dictionary',emoji:'📖'},{word:'wheelchair',emoji:'♿'},{word:'explorer',emoji:'🧭'},{word:'dumbbell',emoji:'🏋️'},{word:'warthog',emoji:'🐗'},{word:'monster',emoji:'👹'},{word:'ballerina',emoji:'🩰'},{word:'baseball',emoji:'⚾'},{word:'basketball',emoji:'🏀'},{word:'campfire',emoji:'🔥'},{word:'carnival',emoji:'🎪'},{word:'champion',emoji:'🏆'},{word:'costume',emoji:'🎭'},{word:'hurricane',emoji:'🌀'},{word:'snowboard',emoji:'🏂'},{word:'stopwatch',emoji:'⏱️'},{word:'tambourine',emoji:'🪘'},{word:'volleyball',emoji:'🏐'}],
       sentences:[{text:'An ___ has a long trunk and huge ears.',answer:'elephant'},{text:'A ___ has an extremely long neck.',answer:'giraffe'},{text:'A ___ waddles on ice but cannot fly.',answer:'penguin'},{text:'A ___ runs on a tiny wheel in its cage.',answer:'hamster'},{text:'A ___ clucks and lays eggs on the farm.',answer:'chicken'},{text:'A ___ is a big, strong, gentle ape.',answer:'gorilla'},{text:'An ___ has eight long arms in the sea.',answer:'octopus'},{text:'A see-through ___ floats gently in the ocean.',answer:'jellyfish'},{text:'A ___ hops around using its strong back legs.',answer:'kangaroo'},{text:'A ___ climbs trees and buries acorns.',answer:'squirrel'},{text:'A ___ wears a mask of black fur around its eyes.',answer:'raccoon'},{text:'A ___ is covered in tiny, sharp spikes.',answer:'hedgehog'},{text:'A bright pink bird standing on one leg is a ___.',answer:'flamingo'},{text:'A ___ shows off its colorful, fanned-out tail.',answer:'peacock'},{text:'A little red bug with black spots is a ___.',answer:'ladybug'},{text:'A caterpillar grows wings and becomes a ___.',answer:'butterfly'},{text:'A ___ lives in the ocean and has two big claws.',answer:'lobster'},{text:'A giant ___ lived millions of years ago.',answer:'dinosaur'},{text:'A magical horse with a horn is called a ___.',answer:'unicorn'},{text:'I ate warm, salty ___ at the movies.',answer:'popcorn'},{text:'I made a ___ with bread, cheese, and ham.',answer:'sandwich'},{text:'I ate fluffy ___ with syrup for breakfast.',answer:'pancake'},{text:'I eat green ___ because it is good for me.',answer:'broccoli'},{text:'A big orange ___ grows for Halloween.',answer:'pumpkin'},{text:'A colorful arc in the sky after rain is a ___.',answer:'rainbow'},{text:'I held a bright red ___ that floated in the air.',answer:'balloon'},{text:'I opened my ___ because it started to rain.',answer:'umbrella'},{text:'I pedal my ___ all around the block.',answer:'bicycle'},{text:'An ___ flies passengers high above the clouds.',answer:'airplane'},{text:'A doctor rushes to help inside an ___.',answer:'ambulance'},{text:'A tall, snowy ___ towers over the valley.',answer:'mountain'},{text:'A ___ can erupt with fiery, hot lava.',answer:'volcano'},{text:'A loud ___ rumbled after the lightning flashed.',answer:'thunder'},{text:'I play a shiny golden ___ in the school band.',answer:'trumpet'},{text:'We rolled snowballs to build a ___.',answer:'snowman'},{text:'A playful ___ leaps and swims in the sea.',answer:'dolphin'},{text:'A ___ has spots and runs incredibly fast.',answer:'leopard'},{text:'A tiny buzzing ___ landed on my arm.',answer:'mosquito'},{text:'I packed my books inside my ___.',answer:'backpack'},{text:'I packed my clothes into a ___ for our trip.',answer:'suitcase'},{text:'I carefully cut the paper with ___.',answer:'scissors'},{text:'I wrote our vacation dates on the ___.',answer:'calendar'},{text:'I typed my story on the ___.',answer:'keyboard'},{text:'A shape with exactly three sides is a ___.',answer:'triangle'},{text:'I laced up my ___ before the race.',answer:'sneakers'},{text:'Farmers drive a ___ across the fields.',answer:'tractor'},{text:'Airplanes take off and land at the ___.',answer:'airport'},{text:'I borrowed a stack of books from the ___.',answer:'library'},{text:'A huge spinning storm is called a ___.',answer:'tornado'},{text:'The golden sun peeks over the hills at ___.',answer:'sunrise'},{text:'I found a beautiful shell on the beach called a ___.',answer:'seashell'},{text:'I love eating a red, juicy ___.',answer:'strawberry'},{text:'I licked a sweet, swirly ___ on a stick.',answer:'lollipop'},{text:'I brush my teeth every morning with a ___.',answer:'toothbrush'},{text:'I gazed at the stars through a ___.',answer:'telescope'},{text:'I rolled down the ramp on my ___.',answer:'skateboard'},{text:'A person who travels to outer space is an ___.',answer:'astronaut'},{text:'A rocket that carries astronauts is called a ___.',answer:'spaceship'},{text:'A single drop of water falling from a cloud is a ___.',answer:'raindrop'},{text:'A tiny, delicate piece of falling snow is a ___.',answer:'snowflake'},{text:'A lizard that can change its colors is a ___.',answer:'chameleon'},{text:'A huge animal with a horn on its nose is a ___.',answer:'rhinoceros'},{text:'A giant animal that wallows in African rivers is a ___.',answer:'hippopotamus'}] }
-  ];
+  ],
+    da: [
+      { id:'easy', name:'Nem', sub:'3-4 bogstaver', emoji:'\ud83c\udf31',
+        words:[{word:'kat',emoji:'🐱'},{word:'hund',emoji:'🐶'},{word:'gris',emoji:'🐷'},{word:'høne',emoji:'🐔'},{word:'ugle',emoji:'🦉'},{word:'ræv',emoji:'🦊'},{word:'myre',emoji:'🐜'},{word:'ged',emoji:'🐐'},{word:'får',emoji:'🐑'},{word:'hest',emoji:'🐴'},{word:'ulv',emoji:'🐺'},{word:'løve',emoji:'🦁'},{word:'and',emoji:'🦆'},{word:'frø',emoji:'🐸'},{word:'fisk',emoji:'🐟'},{word:'abe',emoji:'🐒'},{word:'mus',emoji:'🐭'},{word:'hval',emoji:'🐳'},{word:'haj',emoji:'🦈'},{word:'orm',emoji:'🪱'},{word:'flue',emoji:'🪰'},{word:'myg',emoji:'🦟'},{word:'gås',emoji:'🪿'},{word:'sæl',emoji:'🦭'},{word:'lama',emoji:'🦙'},{word:'løg',emoji:'🧅'},{word:'majs',emoji:'🌽'},{word:'brød',emoji:'🍞'},{word:'ost',emoji:'🧀'},{word:'mælk',emoji:'🥛'},{word:'kage',emoji:'🎂'},{word:'ris',emoji:'🍚'},{word:'saft',emoji:'🧃'},{word:'slik',emoji:'🍬'},{word:'vand',emoji:'💧'},{word:'sko',emoji:'👞'},{word:'hat',emoji:'🎩'},{word:'seng',emoji:'🛏️'},{word:'stol',emoji:'🪑'},{word:'dør',emoji:'🚪'},{word:'bold',emoji:'⚽'},{word:'bil',emoji:'🚗'},{word:'bus',emoji:'🚌'},{word:'tog',emoji:'🚂'},{word:'fly',emoji:'✈️'},{word:'båd',emoji:'⛵'},{word:'skib',emoji:'🚢'},{word:'bog',emoji:'📖'},{word:'ring',emoji:'💍'},{word:'gave',emoji:'🎁'},{word:'måne',emoji:'🌙'},{word:'sol',emoji:'☀️'},{word:'sky',emoji:'☁️'},{word:'regn',emoji:'🌧️'},{word:'sne',emoji:'❄️'},{word:'skov',emoji:'🌲'},{word:'rose',emoji:'🌹'},{word:'træ',emoji:'🌳'},{word:'blad',emoji:'🍃'},{word:'hav',emoji:'🌊'},{word:'slot',emoji:'🏰'},{word:'hus',emoji:'🏠'},{word:'saks',emoji:'✂️'},{word:'æble',emoji:'🍎'},{word:'pære',emoji:'🍐'}],
+        sentences:[{text:'___ siger \'mjav\'.',answer:'kat'},{text:'Min ___ elsker at gø.',answer:'hund'},{text:'En ___ ruller sig i mudder.',answer:'gris'},{text:'En ___ lægger et æg.',answer:'høne'},{text:'En ___ tuder om natten.',answer:'ugle'},{text:'En ___ har en stor busket hale.',answer:'ræv'},{text:'En lille ___ bærer krummer.',answer:'myre'},{text:'Jeg elsker at ride på en ___.',answer:'hest'},{text:'En ___ er kongen af junglen.',answer:'løve'},{text:'En ___ hopper ud i vandet.',answer:'frø'},{text:'En ___ svømmer i havet.',answer:'fisk'},{text:'En lille ___ nipper til ost.',answer:'mus'},{text:'En ___ er det største dyr i havet.',answer:'hval'},{text:'Vi spiser ___ til morgenmad.',answer:'brød'},{text:'Jeg kan godt lide ___ på min mad.',answer:'ost'},{text:'Jeg drikker kold ___.',answer:'mælk'},{text:'Vi spiser sød ___ til fødselsdag.',answer:'kage'},{text:'Jeg drikker et glas ___.',answer:'vand'},{text:'Jeg har nye ___ på.',answer:'sko'},{text:'Jeg tager en varm ___ på.',answer:'hat'},{text:'Jeg sover i min ___.',answer:'seng'},{text:'Jeg sidder på en ___.',answer:'stol'},{text:'Husk at lukke ___ efter dig.',answer:'dør'},{text:'Vi sparker til ___.',answer:'bold'},{text:'Far kører ___ på arbejde.',answer:'bil'},{text:'Vi kører med ___ til skole.',answer:'bus'},{text:'Vi tager ___ til mormor.',answer:'tog'},{text:'Et ___ flyver højt på himlen.',answer:'fly'},{text:'Vi sejler på en lille ___.',answer:'båd'},{text:'Et stort ___ krydser havet.',answer:'skib'},{text:'Jeg elsker at læse min ___.',answer:'bog'},{text:'Mor har en flot ___ på fingeren.',answer:'ring'},{text:'Jeg giver min ven en ___.',answer:'gave'},{text:'Om natten skinner ___.',answer:'måne'},{text:'___ skinner i dag.',answer:'sol'},{text:'Der er en hvid ___ på himlen.',answer:'sky'},{text:'___ falder fra himlen.',answer:'regn'},{text:'___ falder om vinteren.',answer:'sne'},{text:'Vi går en tur i ___.',answer:'skov'},{text:'Mor fik en smuk rød ___.',answer:'rose'},{text:'Fuglen sidder i et ___.',answer:'træ'},{text:'Vi bor i et stort ___.',answer:'hus'},{text:'Jeg spiser et rødt ___.',answer:'æble'},{text:'En ___ smager sødt.',answer:'pære'}] },
+      { id:'medium', name:'Mellem', sub:'5-6 bogstaver', emoji:'\ud83c\udf3f',
+        words:[{word:'banan',emoji:'🍌'},{word:'citron',emoji:'🍋'},{word:'blåbær',emoji:'🫐'},{word:'mango',emoji:'🥭'},{word:'ananas',emoji:'🍍'},{word:'tomat',emoji:'🍅'},{word:'agurk',emoji:'🥒'},{word:'salat',emoji:'🥬'},{word:'vaffel',emoji:'🧇'},{word:'suppe',emoji:'🍲'},{word:'pasta',emoji:'🍝'},{word:'pizza',emoji:'🍕'},{word:'sushi',emoji:'🍣'},{word:'burger',emoji:'🍔'},{word:'pølse',emoji:'🌭'},{word:'kaffe',emoji:'☕'},{word:'peber',emoji:'🌶️'},{word:'nødder',emoji:'🥜'},{word:'trøje',emoji:'👕'},{word:'bukser',emoji:'👖'},{word:'kjole',emoji:'👗'},{word:'sokker',emoji:'🧦'},{word:'jakke',emoji:'🧥'},{word:'kasket',emoji:'🧢'},{word:'vindue',emoji:'🪟'},{word:'lampe',emoji:'💡'},{word:'spejl',emoji:'🪞'},{word:'nøgle',emoji:'🔑'},{word:'kasse',emoji:'📦'},{word:'taske',emoji:'👜'},{word:'cykel',emoji:'🚲'},{word:'raket',emoji:'🚀'},{word:'blyant',emoji:'✏️'},{word:'kridt',emoji:'🖍️'},{word:'ballon',emoji:'🎈'},{word:'vulkan',emoji:'🌋'},{word:'bjerg',emoji:'⛰️'},{word:'blomst',emoji:'🌸'},{word:'strand',emoji:'🏖️'},{word:'ørken',emoji:'🏜️'},{word:'guitar',emoji:'🎸'},{word:'violin',emoji:'🎻'},{word:'tromme',emoji:'🥁'},{word:'fløjte',emoji:'🪈'},{word:'krone',emoji:'👑'},{word:'prins',emoji:'🤴'},{word:'pirat',emoji:'🏴‍☠️'},{word:'ninja',emoji:'🥷'},{word:'larve',emoji:'🐛'},{word:'hammer',emoji:'🔨'},{word:'stige',emoji:'🪜'},{word:'spand',emoji:'🪣'},{word:'kamera',emoji:'📷'},{word:'kuvert',emoji:'✉️'},{word:'cirkel',emoji:'⚪'},{word:'bjørn',emoji:'🐻'},{word:'svane',emoji:'🦢'},{word:'snegl',emoji:'🐌'},{word:'kanin',emoji:'🐰'},{word:'zebra',emoji:'🦓'},{word:'tiger',emoji:'🐯'},{word:'panda',emoji:'🐼'},{word:'koala',emoji:'🐨'},{word:'delfin',emoji:'🐬'},{word:'kamel',emoji:'🐫'},{word:'giraf',emoji:'🦒'},{word:'egern',emoji:'🐿️'},{word:'krabbe',emoji:'🦀'},{word:'drage',emoji:'🐉'},{word:'odder',emoji:'🦦'},{word:'bæver',emoji:'🦫'},{word:'påfugl',emoji:'🦚'}],
+        sentences:[{text:'Jeg spiser en gul ___ til frokost.',answer:'banan'},{text:'En ___ smager meget surt.',answer:'citron'},{text:'Jeg elsker søde ___.',answer:'blåbær'},{text:'En ___ er en sød, saftig gul frugt.',answer:'mango'},{text:'Jeg skærer en ___ i skiver.',answer:'tomat'},{text:'Kaniner elsker at spise ___.',answer:'agurk'},{text:'Jeg spiser ___ til aftensmad.',answer:'salat'},{text:'Jeg spiser en varm ___ med sirup.',answer:'vaffel'},{text:'Vi spiser varm ___ til aftensmad.',answer:'suppe'},{text:'Jeg spiser ___ med tomatsovs.',answer:'pasta'},{text:'Vi bestiller ___ med ost.',answer:'pizza'},{text:'Jeg drikker varm ___ om morgenen.',answer:'kaffe'},{text:'Jeg elsker jordnødder og andre ___.',answer:'nødder'},{text:'Jeg tager en ren ___ på før skole.',answer:'trøje'},{text:'Jeg har varme ___ på om vinteren.',answer:'bukser'},{text:'Prinsessen har en flot ___ på.',answer:'kjole'},{text:'Jeg tager rene ___ på hver morgen.',answer:'sokker'},{text:'Jeg tager min ___ på, når det er koldt.',answer:'jakke'},{text:'Jeg ser ud af ___.',answer:'vindue'},{text:'Jeg tænder ___ før sengetid.',answer:'lampe'},{text:'Jeg kigger på mig selv i ___.',answer:'spejl'},{text:'Jeg låser døren op med en ___.',answer:'nøgle'},{text:'Jeg pakker mine legetøj i en ___.',answer:'kasse'},{text:'Jeg bærer mine bøger i en ___.',answer:'taske'},{text:'Jeg cykler til skole på min ___.',answer:'cykel'},{text:'En ___ letter og flyver ud i rummet.',answer:'raket'},{text:'Jeg skriver mit navn med en ___.',answer:'blyant'},{text:'En hurtig, farverig ___ svæver i luften.',answer:'ballon'},{text:'En ___ kan gløde af varm lava.',answer:'vulkan'},{text:'Vi vandrer op ad et højt ___.',answer:'bjerg'},{text:'Jeg giver mor en smuk ___.',answer:'blomst'},{text:'Vi bygger sandslotte på ___.',answer:'strand'},{text:'Kameler kan krydse den tørre ___.',answer:'ørken'},{text:'Jeg spiller en sang på min ___.',answer:'guitar'},{text:'Jeg slår rytmen på en ___.',answer:'tromme'},{text:'En konge bærer en gylden ___ på hovedet.',answer:'krone'},{text:'En ___ sejler over de syv have.',answer:'pirat'},{text:'En sommerfugl var engang en lille ___.',answer:'larve'},{text:'Jeg slår et søm i med en ___.',answer:'hammer'},{text:'Jeg klatrer op ad en ___.',answer:'stige'},{text:'Jeg samler vand i en ___.',answer:'spand'},{text:'Jeg tager et billede med et ___.',answer:'kamera'},{text:'Formen uden hjørner kaldes en ___.',answer:'cirkel'},{text:'En stor, brun ___ sover om vinteren.',answer:'bjørn'},{text:'En hvid ___ svømmer elegant på søen.',answer:'svane'},{text:'En ___ kravler langsomt med et hus på ryggen.',answer:'snegl'},{text:'En ___ har sorte og hvide striber.',answer:'zebra'},{text:'En ___ har orange og sorte striber.',answer:'tiger'},{text:'En ___ elsker at spise bambus.',answer:'panda'},{text:'En ___ har en meget lang hals.',answer:'giraf'},{text:'En lille ___ gemmer nødder til vinteren.',answer:'egern'},{text:'En ___ går sidelæns på stranden.',answer:'krabbe'},{text:'Jeg flyver min ___ højt i vinden.',answer:'drage'}] },
+      { id:'hard', name:'Sv\u00e6r', sub:'7+ bogstaver', emoji:'\ud83c\udf33',
+        words:[{word:'elefant',emoji:'🐘'},{word:'pingvin',emoji:'🐧'},{word:'kænguru',emoji:'🦘'},{word:'kylling',emoji:'🐣'},{word:'rensdyr',emoji:'🦌'},{word:'dinosaur',emoji:'🦕'},{word:'enhjørning',emoji:'🦄'},{word:'vindrue',emoji:'🍇'},{word:'jordbær',emoji:'🍓'},{word:'fersken',emoji:'🍑'},{word:'appelsin',emoji:'🍊'},{word:'kokosnød',emoji:'🥥'},{word:'avocado',emoji:'🥑'},{word:'gulerod',emoji:'🥕'},{word:'kartoffel',emoji:'🥔'},{word:'hvidløg',emoji:'🧄'},{word:'broccoli',emoji:'🥦'},{word:'champignon',emoji:'🍄'},{word:'græskar',emoji:'🎃'},{word:'honning',emoji:'🍯'},{word:'småkage',emoji:'🍪'},{word:'pandekage',emoji:'🥞'},{word:'popcorn',emoji:'🍿'},{word:'slikkepind',emoji:'🍭'},{word:'chokolade',emoji:'🍫'},{word:'sandwich',emoji:'🥪'},{word:'støvler',emoji:'👢'},{word:'handske',emoji:'🧤'},{word:'stjerne',emoji:'⭐'},{word:'regnbue',emoji:'🌈'},{word:'tulipan',emoji:'🌷'},{word:'bibliotek',emoji:'📚'},{word:'hospital',emoji:'🏥'},{word:'lufthavn',emoji:'🛫'},{word:'trompet',emoji:'🎺'},{word:'saxofon',emoji:'🎷'},{word:'prinsesse',emoji:'👸'},{word:'troldmand',emoji:'🧙'},{word:'havfrue',emoji:'🧜'},{word:'edderkop',emoji:'🕷️'},{word:'sommerfugl',emoji:'🦋'},{word:'mariehøne',emoji:'🐞'},{word:'honningbi',emoji:'🐝'},{word:'kalender',emoji:'📅'},{word:'notesbog',emoji:'📓'},{word:'tastatur',emoji:'⌨️'},{word:'trekant',emoji:'🔺'},{word:'firkant',emoji:'🟧'},{word:'sneakers',emoji:'👟'},{word:'løbehjul',emoji:'🛴'},{word:'traktor',emoji:'🚜'},{word:'bygning',emoji:'🏢'},{word:'stadion',emoji:'🏟️'},{word:'tornado',emoji:'🌪️'},{word:'solopgang',emoji:'🌅'},{word:'diamant',emoji:'💎'},{word:'musling',emoji:'🐚'},{word:'milkshake',emoji:'🥤'},{word:'solbriller',emoji:'🕶️'},{word:'tandbørste',emoji:'🪥'},{word:'teleskop',emoji:'🔭'},{word:'mikroskop',emoji:'🔬'},{word:'skateboard',emoji:'🛹'},{word:'motorcykel',emoji:'🏍️'},{word:'ambulance',emoji:'🚑'},{word:'rumskib',emoji:'🛸'},{word:'astronaut',emoji:'👨‍🚀'},{word:'postkasse',emoji:'📫'},{word:'springvand',emoji:'⛲'},{word:'regndråbe',emoji:'💧'},{word:'snefnug',emoji:'❄️'},{word:'kamæleon',emoji:'🦎'},{word:'orangutang',emoji:'🦧'},{word:'næsehorn',emoji:'🦏'},{word:'flodhest',emoji:'🦛'},{word:'chimpanse',emoji:'🐒'},{word:'pindsvin',emoji:'🦔'},{word:'telefon',emoji:'📱'},{word:'computer',emoji:'💻'}],
+        sentences:[{text:'En ___ har en lang snabel og store ører.',answer:'elefant'},{text:'En ___ vralter på isen, men kan ikke flyve.',answer:'pingvin'},{text:'En ___ hopper afsted på sine stærke bagben.',answer:'kænguru'},{text:'En ___ galper og lægger æg på gården.',answer:'kylling'},{text:'Et ___ trækker julemandens slæde.',answer:'rensdyr'},{text:'En kæmpe ___ levede for millioner af år siden.',answer:'dinosaur'},{text:'En magisk hest med et horn kaldes en ___.',answer:'enhjørning'},{text:'Jeg spiser søde grønne ___.',answer:'vindrue'},{text:'Et rødt ___ smager sødt om sommeren.',answer:'jordbær'},{text:'En ___ er en blød, saftig frugt.',answer:'fersken'},{text:'Jeg presser saften af en ___.',answer:'appelsin'},{text:'En ___ har hårdt skal og sød mælk indeni.',answer:'kokosnød'},{text:'Jeg smører en moden ___ på min mad.',answer:'avocado'},{text:'Kaniner elsker at spise en orange ___.',answer:'gulerod'},{text:'Vi steger en ___ til aftensmad.',answer:'kartoffel'},{text:'Jeg spiser grøn ___, fordi det er sundt.',answer:'broccoli'},{text:'Et stort orange ___ pryder huset til halloween.',answer:'græskar'},{text:'Jeg bagte en ___ med chokoladestykker.',answer:'småkage'},{text:'Jeg spiser fluffy ___ med sirup til morgenmad.',answer:'pandekage'},{text:'Jeg spiser sprødt, saltet ___ i biografen.',answer:'popcorn'},{text:'Jeg slikker en sød ___ på en pind.',answer:'slikkepind'},{text:'Jeg elsker at spise brun ___.',answer:'chokolade'},{text:'Jeg laver en ___ med ost og skinke.',answer:'sandwich'},{text:'Jeg tager mine ___ på, før jeg går ud i sneen.',answer:'støvler'},{text:'Jeg tager en varm ___ på hænderne.',answer:'handske'},{text:'Om natten kan jeg se en lysende ___ på himlen.',answer:'stjerne'},{text:'Efter regnvejr ser vi en farverig ___ på himlen.',answer:'regnbue'},{text:'En rød ___ blomstrer om foråret.',answer:'tulipan'},{text:'Jeg låner bøger på ___.',answer:'bibliotek'},{text:'Lægen hjælper syge mennesker på ___.',answer:'hospital'},{text:'Flyene lander og letter på ___.',answer:'lufthavn'},{text:'Jeg spiller en gylden ___ i skoleorkestret.',answer:'trompet'},{text:'En smuk ___ gifter sig med en prins.',answer:'prinsesse'},{text:'En ___ tryller med sin magiske stav.',answer:'troldmand'},{text:'En ___ svømmer i havet med en fiskehale.',answer:'havfrue'},{text:'En ___ har otte ben og spinder spind.',answer:'edderkop'},{text:'En larve bliver til en flot ___.',answer:'sommerfugl'},{text:'En lille rød ___ har sorte prikker.',answer:'mariehøne'},{text:'En travl ___ laver honning.',answer:'honningbi'},{text:'Jeg skriver ferieplanen på ___.',answer:'kalender'},{text:'Jeg skriver mine tanker ned i en ___.',answer:'notesbog'},{text:'Jeg skriver min historie på et ___.',answer:'tastatur'},{text:'En form med tre sider hedder en ___.',answer:'trekant'},{text:'Jeg binder mine nye ___ før løbeturen.',answer:'sneakers'},{text:'Bønderne kører en ___ hen over marken.',answer:'traktor'},{text:'Et stort ___ rejser sig midt i byen.',answer:'bygning'},{text:'En kraftig hvirvelvind kaldes en ___.',answer:'tornado'},{text:'Den gyldne sol titter frem ved ___.',answer:'solopgang'},{text:'Jeg fandt en smuk skal på stranden, en ___.',answer:'musling'},{text:'Jeg drikker en kold ___ med sugerør.',answer:'milkshake'},{text:'Jeg børster tænder hver morgen med en ___.',answer:'tandbørste'},{text:'Jeg kigger på stjernerne gennem et ___.',answer:'teleskop'},{text:'Jeg triller ned ad rampen på mit ___.',answer:'skateboard'},{text:'Lægen skynder sig af sted i en ___.',answer:'ambulance'},{text:'Et rumskib, der flyver astronauter til Månen, kaldes et ___.',answer:'rumskib'},{text:'En person, der rejser ud i rummet, er en ___.',answer:'astronaut'},{text:'En dråbe vand, der falder fra en sky, er en ___.',answer:'regndråbe'},{text:'Et lille, sart stykke faldende sne er et ___.',answer:'snefnug'},{text:'En firben, der skifter farve, er en ___.',answer:'kamæleon'},{text:'Et stort dyr med et horn på næsen er et ___.',answer:'næsehorn'},{text:'Et kæmpe dyr, der bader i floden, er en ___.',answer:'flodhest'},{text:'Jeg taler i min ___ med mine venner.',answer:'telefon'}] }
+    ]
+  };
+
   var currentGame = null, currentLevel = null, idx = 0, answer = [], sessionWords = [];
   // When running inside the Android app shell, window.AndroidTTS is injected by
   // MainActivity before this page loads, and speech goes through Android's native
@@ -243,6 +323,10 @@
   var gamesScreen = document.getElementById('gamesScreen');
   var levelScreen = document.getElementById('levelScreen');
   var gameScreen = document.getElementById('gameScreen');
+  var gamesTitleEl = document.getElementById('gamesTitle');
+  var gamesTaglineEl = document.getElementById('gamesTagline');
+  var langEnBtn = document.getElementById('langEnBtn');
+  var langDaBtn = document.getElementById('langDaBtn');
   var gameListEl = document.getElementById('gameList');
   var levelListEl = document.getElementById('levelList');
   var levelScreenTitle = document.getElementById('levelScreenTitle');
@@ -265,10 +349,44 @@
   var backBtn = document.getElementById('backBtn');
   var gamesBackBtn = document.getElementById('gamesBackBtn');
   var sayBtn = document.getElementById('sayBtn');
+  var soundHintEl = document.getElementById('soundHint');
+
+  // Applies every piece of STRINGS-driven UI copy for the current language, plus
+  // the games list (which carries its own per-language names/taglines). Called on
+  // load and whenever the language switch is tapped; the level/game screens pick
+  // up the new language the next time they're opened, since the language switch
+  // only lives on the games screen (no need to re-render mid-round).
+  function applyLangStrings(){
+    var strs = STRINGS[lang];
+    document.documentElement.lang = lang;
+    gamesTitleEl.textContent = strs.gamesTitle;
+    gamesTaglineEl.textContent = strs.gamesTagline;
+    gamesBackBtn.textContent = strs.backToGames;
+    backBtn.textContent = strs.backToLevels;
+    soundHintEl.textContent = strs.soundHint;
+    nextBtn.textContent = strs.nextWord;
+    if(speechSupported){
+      sayBtn.textContent = strs.hearItAgain;
+      sayBtn.setAttribute('aria-label', strs.hearWordAria);
+    } else {
+      sayBtn.textContent = strs.soundUnavailable;
+    }
+    langEnBtn.classList.toggle('active', lang === 'en');
+    langDaBtn.classList.toggle('active', lang === 'da');
+    renderGames();
+  }
+
+  function setLang(newLang){
+    if(newLang !== 'en' && newLang !== 'da') return;
+    if(newLang === lang) return;
+    lang = newLang;
+    try{ localStorage.setItem(LANG_STORAGE_KEY, lang); }catch(e){}
+    applyLangStrings();
+  }
 
   function renderGames(){
     gameListEl.innerHTML = '';
-    GAMES.forEach(function(g){
+    GAMES_BY_LANG[lang].forEach(function(g){
       var btn = document.createElement('button');
       btn.className = 'game-card';
       btn.innerHTML =
@@ -285,7 +403,7 @@
   function openGame(g){
     currentGame = g;
     levelScreenTitle.textContent = g.name + ' ' + g.emoji;
-    levelScreenTagline.textContent = 'Pick a level to start ' + (LEVEL_TAGLINE_VERB[g.id] || 'playing');
+    levelScreenTagline.textContent = STRINGS[lang].pickLevelPrefix + (LEVEL_TAGLINE_VERB_BY_LANG[lang][g.id] || '');
     gamesScreen.classList.add('hidden');
     levelScreen.classList.remove('hidden');
     renderLevels();
@@ -293,7 +411,7 @@
 
   function renderLevels(){
     levelListEl.innerHTML = '';
-    LEVELS.forEach(function(lv){
+    LEVELS_BY_LANG[lang].forEach(function(lv){
       var btn = document.createElement('button');
       btn.className = 'level-card level-' + lv.id;
       btn.innerHTML =
@@ -343,20 +461,26 @@
   // queue=true appends after whatever is currently speaking instead of cutting it off.
   // Used when the word-complete message follows right after the last letter's (or
   // picked word's) own announcement, so it isn't interrupted mid-way.
+  // Speech always uses the currently active language (lang), so words, letters and
+  // celebration messages are spoken in the right voice without any extra plumbing
+  // at each call site.
   function speak(text, queue){
     if(!speechSupported) return;
+    var ttsLang = LANG_TTS_CODE[lang] || 'en-US';
     if(hasNativeTTS){
-      try{ window.AndroidTTS.speak(text, !!queue); }catch(e){}
+      try{ window.AndroidTTS.speak(text, !!queue, ttsLang); }catch(e){}
       return;
     }
     try{
       if(!queue){ window.speechSynthesis.cancel(); }
       var u = new SpeechSynthesisUtterance(text);
       u.rate = 0.85; u.pitch = 1.1; u.volume = 1;
+      u.lang = ttsLang;
       var voices = window.speechSynthesis.getVoices();
       if(voices && voices.length){
-        var enVoice = voices.find(function(v){ return /en/i.test(v.lang); });
-        if(enVoice) u.voice = enVoice;
+        var langPrefix = ttsLang.split('-')[0].toLowerCase();
+        var matchVoice = voices.find(function(v){ return v.lang && v.lang.toLowerCase().indexOf(langPrefix) === 0; });
+        if(matchVoice) u.voice = matchVoice;
       }
       window.speechSynthesis.speak(u);
     }catch(e){}
@@ -583,10 +707,11 @@
   }
 
   function onWordComplete(){
-    var msgs = ['Great job! 🎉', 'You did it! ⭐', 'Super speller! 🌟', 'Awesome! 🎈'];
+    var strs = STRINGS[lang];
+    var msgs = strs.celebrate;
     celebrateEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
     var completedWord = currentGame.id === 'add' ? sessionWords[idx].answer : sessionWords[idx].word;
-    speak(completedWord + '! Well done.', true);
+    speak(completedWord + strs.wellDone, true);
     launchConfetti();
 
     // A level never ends here — idx just keeps advancing, and loadWord() reshuffles
@@ -613,9 +738,8 @@
   }
 
   if(speechSupported){
-    document.getElementById('soundHint').classList.remove('hidden');
+    soundHintEl.classList.remove('hidden');
   } else {
-    sayBtn.textContent = '🔇 Sound unavailable';
     sayBtn.disabled = true;
   }
 
@@ -631,8 +755,12 @@
   nextBtn.addEventListener('click', loadWord);
   backBtn.addEventListener('click', goLevels);
   gamesBackBtn.addEventListener('click', goGames);
+  langEnBtn.addEventListener('click', function(){ setLang('en'); });
+  langDaBtn.addEventListener('click', function(){ setLang('da'); });
 
-  renderGames();
+  // Sets all STRINGS-driven text (including the games list) for the language
+  // restored from localStorage (or the 'en' default), and renders the games list.
+  applyLangStrings();
 })();
 </script>
 </body>
