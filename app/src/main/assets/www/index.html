@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spell It!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky:#54C6EB; --sky-deep:#2FB1D9; --sun:#FFD166; --coral:#FF6F5E;
+    --leaf:#06D6A0; --ink:#20344A; --cloud:#FFFFFF; --violet:#8B7CF6;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#EAF4FA; } }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; min-height:100%; font-family:'Nunito', sans-serif;
+    background:linear-gradient(180deg,var(--sky) 0%, var(--sky-deep) 100%);
+    color:var(--ink); display:flex; flex-direction:column; align-items:center; overflow-x:hidden;
+  }
+  .wrap{ width:100%; max-width:480px; padding:20px 18px 32px; display:flex; flex-direction:column; align-items:center; gap:16px; }
+  h1{ font-family:'Baloo 2', sans-serif; color:#fff; font-size:28px; margin:2px 0 0; text-shadow:0 3px 0 rgba(0,0,0,0.12); }
+  .tagline{ color:#fff; opacity:0.9; font-weight:600; margin-top:-10px; text-align:center; font-size:14px; }
+  .hidden{ display:none !important; }
+
+  /* Home screen */
+  .level-list{ width:100%; display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+  .level-card{
+    background:var(--cloud); border:none; border-radius:22px; padding:18px 20px;
+    display:flex; align-items:center; gap:16px; cursor:pointer; text-align:left;
+    box-shadow:0 8px 0 rgba(0,40,60,0.18); width:100%;
+  }
+  .level-card:active{ transform:translateY(4px); box-shadow:0 4px 0 rgba(0,40,60,0.18); }
+  .level-emoji{ font-size:38px; width:56px; text-align:center; }
+  .level-info{ flex:1; }
+  .level-name{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:19px; color:var(--ink); }
+  .level-sub{ font-size:13px; color:#6B7C8C; font-weight:600; margin-top:2px; }
+  .level-stars{ font-family:'Baloo 2', sans-serif; font-weight:700; color:var(--sun); font-size:14px; margin-top:6px; }
+  .level-easy .level-emoji{ color:var(--leaf); }
+
+  /* Game screen */
+  .top-bar{ width:100%; display:flex; align-items:center; justify-content:space-between; }
+  .back-btn{
+    border:none; background:rgba(255,255,255,0.25); color:#fff; font-family:'Baloo 2', sans-serif;
+    font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; cursor:pointer;
+  }
+  .stars{ font-family:'Baloo 2', sans-serif; color:#fff; font-weight:700; font-size:14px; }
+  .progress{ display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+  .dot{ width:13px;height:13px;border-radius:50%; background:rgba(255,255,255,0.35); border:2px solid rgba(255,255,255,0.6); transition:transform .25s ease, background .25s ease; }
+  .dot.done{ background:var(--sun); border-color:var(--sun); transform:scale(1.15); }
+  .dot.current{ transform:scale(1.3); border-color:#fff; }
+
+  .stage{ width:100%; background:var(--cloud); border-radius:28px; padding:26px 18px 22px; box-shadow:0 14px 0 rgba(0,40,60,0.18); display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .picture-frame{ width:140px;height:140px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #FFF6DA, var(--sun)); display:flex;align-items:center;justify-content:center; font-size:70px; box-shadow:inset 0 -6px 0 rgba(0,0,0,0.08); user-select:none; }
+  .picture-frame.bump{ animation:bump .5s ease; }
+  @keyframes bump{ 0%{transform:scale(1)} 30%{transform:scale(1.12)} 100%{transform:scale(1)} }
+
+  .say-btn{ border:none; background:var(--sky-deep); color:#fff; font-family:'Baloo 2', sans-serif; font-weight:700; font-size:15px; padding:10px 18px; border-radius:999px; display:flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 4px 0 rgba(0,0,0,0.15); }
+  .say-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.15); }
+
+  .slots{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; min-height:48px; }
+  .slot{ width:38px;height:44px; border-radius:9px; border:3px solid #D9E4EC; display:flex;align-items:center;justify-content:center; font-family:'Baloo 2', sans-serif; font-weight:800; font-size:21px; color:var(--ink); background:#F5F9FB; }
+  .slot.filled{ border-color:var(--leaf); background:#E7FBF4; }
+
+  .tiles{ display:flex; gap:9px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+  .tile{ width:48px;height:52px; border-radius:13px; border:none; background:var(--coral); color:#fff; font-family:'Baloo 2', sans-serif; font-weight:800; font-size:23px; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.18); }
+  .tile:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.18); }
+  .tile.used{ visibility:hidden; }
+  .tile.shake{ animation:shake .4s ease; }
+  @keyframes shake{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  .celebrate{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:21px; color:var(--leaf); min-height:28px; text-align:center; }
+  .next-btn, .home-btn, .redo-btn{ border:none; color:#fff; font-family:'Baloo 2', sans-serif; font-weight:700; font-size:15px; padding:12px 20px; border-radius:999px; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,0.15); display:none; }
+  .next-btn{ background:var(--leaf); }
+  .redo-btn{ background:var(--sun); color:var(--ink); }
+  .home-btn{ background:var(--violet); }
+  .next-btn.show, .home-btn.show, .redo-btn.show{ display:inline-block; }
+  .next-btn:active, .home-btn:active, .redo-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.15); }
+
+  .confetti{ position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; z-index:5; }
+  .confetti span{ position:absolute; top:-20px; font-size:20px; animation:fall linear forwards; }
+  @keyframes fall{ to{ transform:translateY(110vh) rotate(360deg); opacity:0.9; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HOME SCREEN -->
+  <div id="homeScreen">
+    <h1>Spell It! 🐣</h1>
+    <div class="tagline">Pick a level to start spelling</div>
+    <div class="level-list" id="levelList"></div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="gameScreen" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
+    <div class="top-bar">
+      <button class="back-btn" id="backBtn">← Levels</button>
+      <div class="stars" id="starCount">⭐ 0 / 0</div>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="stage">
+      <div class="picture-frame" id="pictureFrame">🐱</div>
+      <button class="say-btn" id="sayBtn" aria-label="Hear the word">🔊 Hear it again</button>
+      <div id="soundHint" class="hidden" style="font-size:12px; color:#6B7C8C; font-weight:600; text-align:center; margin-top:-8px;">No sound? Check your device's volume and text‑to‑speech settings.</div>
+      <div class="slots" id="slots"></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="celebrate" id="celebrate"></div>
+      <div style="display:flex; gap:10px;">
+        <button class="next-btn" id="nextBtn">Next word →</button>
+        <button class="redo-btn" id="redoBtn">🔁 Redo level</button>
+        <button class="home-btn" id="homeBtn">🏠 Levels</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var ROUND_SIZE = 6;
+  var LEVELS = [
+    { id:'easy', name:'Easy', sub:'3-letter words', emoji:'🌱',
+      words:[{word:'cat',emoji:'🐱'},{word:'dog',emoji:'🐶'},{word:'cow',emoji:'🐮'},{word:'pig',emoji:'🐷'},{word:'hen',emoji:'🐔'},{word:'owl',emoji:'🦉'},{word:'bat',emoji:'🦇'},{word:'fox',emoji:'🦊'},{word:'ant',emoji:'🐜'},{word:'bee',emoji:'🐝'},{word:'bug',emoji:'🐛'},{word:'cub',emoji:'🐻'},{word:'ram',emoji:'🐏'},{word:'ewe',emoji:'🐑'},{word:'rat',emoji:'🐀'},{word:'ape',emoji:'🦍'},{word:'koi',emoji:'🐠'},{word:'fly',emoji:'🪰'},{word:'cod',emoji:'🐟'},{word:'jay',emoji:'🐦'},{word:'doe',emoji:'🦌'},{word:'yak',emoji:'🐃'},{word:'boa',emoji:'🐍'},{word:'bed',emoji:'🛏️'},{word:'box',emoji:'📦'},{word:'bin',emoji:'🗑️'},{word:'can',emoji:'🥫'},{word:'cup',emoji:'☕'},{word:'jar',emoji:'🫙'},{word:'key',emoji:'🔑'},{word:'mop',emoji:'🧹'},{word:'net',emoji:'🥅'},{word:'pan',emoji:'🍳'},{word:'pin',emoji:'📌'},{word:'tub',emoji:'🛁'},{word:'van',emoji:'🚐'},{word:'bow',emoji:'🎀'},{word:'saw',emoji:'🪚'},{word:'bag',emoji:'👜'},{word:'toy',emoji:'🧸'},{word:'rod',emoji:'🎣'},{word:'pen',emoji:'🖊️'},{word:'tie',emoji:'👔'},{word:'axe',emoji:'🪓'},{word:'map',emoji:'🗺️'},{word:'egg',emoji:'🥚'},{word:'ham',emoji:'🍖'},{word:'nut',emoji:'🥜'},{word:'pea',emoji:'🫛'},{word:'pie',emoji:'🥧'},{word:'yam',emoji:'🍠'},{word:'cob',emoji:'🌽'},{word:'tea',emoji:'🍵'},{word:'sun',emoji:'☀️'},{word:'sea',emoji:'🌊'},{word:'ice',emoji:'🧊'},{word:'log',emoji:'🪵'},{word:'web',emoji:'🕸️'},{word:'fog',emoji:'🌫️'},{word:'gem',emoji:'💎'},{word:'ivy',emoji:'🌿'},{word:'oak',emoji:'🌳'},{word:'bud',emoji:'🌱'},{word:'bus',emoji:'🚌'},{word:'car',emoji:'🚗'},{word:'cab',emoji:'🚕'},{word:'jet',emoji:'✈️'},{word:'ski',emoji:'🎿'},{word:'arm',emoji:'💪'},{word:'ear',emoji:'👂'},{word:'eye',emoji:'👁️'},{word:'leg',emoji:'🦵'},{word:'lip',emoji:'👄'},{word:'hat',emoji:'🎩'},{word:'cap',emoji:'🧢'}] },
+    { id:'medium', name:'Medium', sub:'4-5 letter words', emoji:'🌿',
+      words:[{word:'wolf',emoji:'🐺'},{word:'deer',emoji:'🦌'},{word:'goat',emoji:'🐐'},{word:'sheep',emoji:'🐑'},{word:'crab',emoji:'🦀'},{word:'clam',emoji:'🐚'},{word:'worm',emoji:'🐛'},{word:'wasp',emoji:'🐝'},{word:'dove',emoji:'🕊️'},{word:'swan',emoji:'🦢'},{word:'frog',emoji:'🐸'},{word:'lion',emoji:'🦁'},{word:'duck',emoji:'🦆'},{word:'bear',emoji:'🐻'},{word:'zebra',emoji:'🦓'},{word:'snake',emoji:'🐍'},{word:'mouse',emoji:'🐭'},{word:'horse',emoji:'🐴'},{word:'whale',emoji:'🐳'},{word:'shark',emoji:'🦈'},{word:'camel',emoji:'🐫'},{word:'koala',emoji:'🐨'},{word:'panda',emoji:'🐼'},{word:'tiger',emoji:'🐯'},{word:'eagle',emoji:'🦅'},{word:'goose',emoji:'🪿'},{word:'otter',emoji:'🦦'},{word:'skunk',emoji:'🦨'},{word:'snail',emoji:'🐌'},{word:'apple',emoji:'🍎'},{word:'mango',emoji:'🥭'},{word:'lemon',emoji:'🍋'},{word:'grape',emoji:'🍇'},{word:'melon',emoji:'🍈'},{word:'peach',emoji:'🍑'},{word:'berry',emoji:'🫐'},{word:'candy',emoji:'🍬'},{word:'donut',emoji:'🍩'},{word:'bread',emoji:'🍞'},{word:'pasta',emoji:'🍝'},{word:'pizza',emoji:'🍕'},{word:'sushi',emoji:'🍣'},{word:'honey',emoji:'🍯'},{word:'juice',emoji:'🧃'},{word:'bacon',emoji:'🥓'},{word:'onion',emoji:'🧅'},{word:'soup',emoji:'🍲'},{word:'rice',emoji:'🍚'},{word:'cake',emoji:'🍰'},{word:'ruler',emoji:'📏'},{word:'paint',emoji:'🎨'},{word:'brush',emoji:'🖌️'},{word:'book',emoji:'📖'},{word:'ball',emoji:'⚽'},{word:'bike',emoji:'🚲'},{word:'kite',emoji:'🪁'},{word:'rock',emoji:'🪨'},{word:'leaf',emoji:'🍃'},{word:'rose',emoji:'🌹'},{word:'tulip',emoji:'🌷'},{word:'cloud',emoji:'☁️'},{word:'snow',emoji:'❄️'},{word:'rain',emoji:'🌧️'},{word:'wind',emoji:'💨'},{word:'train',emoji:'🚂'},{word:'truck',emoji:'🚚'},{word:'tent',emoji:'⛺'},{word:'house',emoji:'🏠'},{word:'watch',emoji:'⌚'},{word:'clock',emoji:'🕐'},{word:'phone',emoji:'📱'},{word:'chair',emoji:'🪑'},{word:'sock',emoji:'🧦'},{word:'shoe',emoji:'👞'},{word:'coat',emoji:'🧥'}] },
+    { id:'hard', name:'Hard', sub:'6+ letter words', emoji:'🌳',
+      words:[{word:'rabbit',emoji:'🐰'},{word:'turtle',emoji:'🐢'},{word:'dolphin',emoji:'🐬'},{word:'elephant',emoji:'🐘'},{word:'giraffe',emoji:'🦒'},{word:'penguin',emoji:'🐧'},{word:'monkey',emoji:'🐒'},{word:'spider',emoji:'🕷️'},{word:'hamster',emoji:'🐹'},{word:'chicken',emoji:'🐔'},{word:'gorilla',emoji:'🦍'},{word:'octopus',emoji:'🐙'},{word:'jellyfish',emoji:'🪼'},{word:'scorpion',emoji:'🦂'},{word:'crocodile',emoji:'🐊'},{word:'kangaroo',emoji:'🦘'},{word:'squirrel',emoji:'🐿️'},{word:'raccoon',emoji:'🦝'},{word:'hedgehog',emoji:'🦔'},{word:'flamingo',emoji:'🦩'},{word:'peacock',emoji:'🦚'},{word:'ladybug',emoji:'🐞'},{word:'butterfly',emoji:'🦋'},{word:'caterpillar',emoji:'🐛'},{word:'lobster',emoji:'🦞'},{word:'walrus',emoji:'🦭'},{word:'dinosaur',emoji:'🦕'},{word:'unicorn',emoji:'🦄'},{word:'reindeer',emoji:'🦌'},{word:'buffalo',emoji:'🐃'},{word:'avocado',emoji:'🥑'},{word:'popcorn',emoji:'🍿'},{word:'sandwich',emoji:'🥪'},{word:'pancake',emoji:'🥞'},{word:'broccoli',emoji:'🥦'},{word:'mushroom',emoji:'🍄'},{word:'pumpkin',emoji:'🎃'},{word:'coconut',emoji:'🥥'},{word:'pretzel',emoji:'🥨'},{word:'waffle',emoji:'🧇'},{word:'noodle',emoji:'🍜'},{word:'cookie',emoji:'🍪'},{word:'cheese',emoji:'🧀'},{word:'carrot',emoji:'🥕'},{word:'potato',emoji:'🥔'},{word:'tomato',emoji:'🍅'},{word:'lettuce',emoji:'🥬'},{word:'peanut',emoji:'🥜'},{word:'pickle',emoji:'🥒'},{word:'rainbow',emoji:'🌈'},{word:'balloon',emoji:'🎈'},{word:'umbrella',emoji:'☂️'},{word:'bicycle',emoji:'🚲'},{word:'airplane',emoji:'✈️'},{word:'helicopter',emoji:'🚁'},{word:'mountain',emoji:'⛰️'},{word:'volcano',emoji:'🌋'},{word:'thunder',emoji:'⚡'},{word:'flower',emoji:'🌸'},{word:'forest',emoji:'🌲'},{word:'desert',emoji:'🏜️'},{word:'island',emoji:'🏝️'},{word:'bridge',emoji:'🌉'},{word:'castle',emoji:'🏰'},{word:'rocket',emoji:'🚀'},{word:'basket',emoji:'🧺'},{word:'window',emoji:'🪟'},{word:'guitar',emoji:'🎸'},{word:'violin',emoji:'🎻'},{word:'trumpet',emoji:'🎺'},{word:'laptop',emoji:'💻'},{word:'pencil',emoji:'✏️'},{word:'crayon',emoji:'🖍️'},{word:'snowman',emoji:'⛄'},{word:'sunset',emoji:'🌇'}] }
+  ];
+
+  var STORAGE_KEY = 'spellit_progress_v2';
+  var progressData = {};
+  var currentLevel = null, idx = 0, answer = [], sessionWords = [];
+  // When running inside the Android app shell, window.AndroidTTS is injected by
+  // MainActivity before this page loads, and speech goes through Android's native
+  // TextToSpeech engine instead (Android's WebView does not implement the browser
+  // Web Speech API, so speechSynthesis alone would stay silent there).
+  var hasNativeTTS = !!(window.AndroidTTS && window.AndroidTTS.speak);
+  var speechSupported = hasNativeTTS || ('speechSynthesis' in window);
+  var audioUnlocked = false;
+
+  function unlockAudioOnce(){
+    if(audioUnlocked || !speechSupported || hasNativeTTS) return;
+    audioUnlocked = true;
+    try{
+      var u = new SpeechSynthesisUtterance(' ');
+      u.volume = 1;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  document.addEventListener('pointerdown', unlockAudioOnce, { once:true });
+  document.addEventListener('touchstart', unlockAudioOnce, { once:true, passive:true });
+
+  var homeScreen = document.getElementById('homeScreen');
+  var gameScreen = document.getElementById('gameScreen');
+  var levelListEl = document.getElementById('levelList');
+  var pictureFrame = document.getElementById('pictureFrame');
+  var slotsEl = document.getElementById('slots');
+  var tilesEl = document.getElementById('tiles');
+  var celebrateEl = document.getElementById('celebrate');
+  var nextBtn = document.getElementById('nextBtn');
+  var redoBtn = document.getElementById('redoBtn');
+  var homeBtn = document.getElementById('homeBtn');
+  var backBtn = document.getElementById('backBtn');
+  var sayBtn = document.getElementById('sayBtn');
+  var progressEl = document.getElementById('progress');
+  var starCountEl = document.getElementById('starCount');
+
+  function loadProgress(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) progressData = JSON.parse(raw) || {};
+    }catch(e){ progressData = {}; }
+  }
+  function saveProgress(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData)); }catch(e){}
+  }
+  function levelStars(levelId){
+    return (progressData[levelId] && progressData[levelId].stars) || 0;
+  }
+
+  function renderHome(){
+    levelListEl.innerHTML = '';
+    LEVELS.forEach(function(lv){
+      var btn = document.createElement('button');
+      btn.className = 'level-card level-' + lv.id;
+      var stars = levelStars(lv.id);
+      var roundSize = Math.min(ROUND_SIZE, lv.words.length);
+      btn.innerHTML =
+        '<div class="level-emoji">' + lv.emoji + '</div>' +
+        '<div class="level-info">' +
+          '<div class="level-name">' + lv.name + '</div>' +
+          '<div class="level-sub">' + lv.sub + '</div>' +
+          '<div class="level-stars">⭐ ' + stars + ' / ' + roundSize + '</div>' +
+        '</div>';
+      btn.addEventListener('click', function(){ startLevel(lv); });
+      levelListEl.appendChild(btn);
+    });
+  }
+
+  function startLevel(lv){
+    currentLevel = lv;
+    var roundSize = Math.min(ROUND_SIZE, lv.words.length);
+    sessionWords = shuffle(lv.words).slice(0, roundSize);
+    idx = 0;
+    homeScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    loadWord();
+  }
+
+  function goHome(){
+    try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
+    gameScreen.classList.add('hidden');
+    homeScreen.classList.remove('hidden');
+    renderHome();
+  }
+
+  function speak(text){
+    if(!speechSupported) return;
+    if(hasNativeTTS){
+      try{ window.AndroidTTS.speak(text); }catch(e){}
+      return;
+    }
+    try{
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.85; u.pitch = 1.1; u.volume = 1;
+      var voices = window.speechSynthesis.getVoices();
+      if(voices && voices.length){
+        var enVoice = voices.find(function(v){ return /en/i.test(v.lang); });
+        if(enVoice) u.voice = enVoice;
+      }
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for(var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i+1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function renderProgressDots(){
+    progressEl.innerHTML = '';
+    sessionWords.forEach(function(w, i){
+      var d = document.createElement('div');
+      d.className = 'dot' + (i < idx ? ' done' : '') + (i === idx ? ' current' : '');
+      progressEl.appendChild(d);
+    });
+    starCountEl.textContent = '⭐ ' + levelStars(currentLevel.id) + ' / ' + sessionWords.length;
+  }
+
+  function loadWord(){
+    answer = [];
+    celebrateEl.textContent = '';
+    nextBtn.classList.remove('show');
+    redoBtn.classList.remove('show');
+    homeBtn.classList.remove('show');
+    var w = sessionWords[idx];
+    pictureFrame.textContent = w.emoji;
+    pictureFrame.classList.remove('bump');
+    void pictureFrame.offsetWidth;
+    pictureFrame.classList.add('bump');
+
+    slotsEl.innerHTML = '';
+    for(var i = 0; i < w.word.length; i++){
+      var s = document.createElement('div');
+      s.className = 'slot';
+      slotsEl.appendChild(s);
+    }
+
+    var letters = shuffle(w.word.split(''));
+    tilesEl.innerHTML = '';
+    letters.forEach(function(letter){
+      var btn = document.createElement('button');
+      btn.className = 'tile';
+      btn.textContent = letter.toUpperCase();
+      btn.addEventListener('click', function(){ handleTap(letter, btn); });
+      tilesEl.appendChild(btn);
+    });
+
+    renderProgressDots();
+    speak(w.word);
+  }
+
+  function handleTap(letter, btn){
+    speak(letter.toUpperCase());
+    var w = sessionWords[idx];
+    var expected = w.word[answer.length];
+    if(letter === expected){
+      answer.push(letter);
+      btn.classList.add('used');
+      var slot = slotsEl.children[answer.length - 1];
+      slot.textContent = letter.toUpperCase();
+      slot.classList.add('filled');
+      if(answer.length === w.word.length) onWordComplete();
+    } else {
+      btn.classList.remove('shake');
+      void btn.offsetWidth;
+      btn.classList.add('shake');
+    }
+  }
+
+  function onWordComplete(){
+    var lv = currentLevel;
+    if(!progressData[lv.id]) progressData[lv.id] = { stars:0 };
+    progressData[lv.id].stars = Math.min(sessionWords.length, progressData[lv.id].stars + 1);
+
+    var msgs = ['Great job! 🎉', 'You did it! ⭐', 'Super speller! 🌟', 'Awesome! 🎈'];
+    celebrateEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    speak(sessionWords[idx].word + '! Well done.');
+    launchConfetti();
+
+    if(idx < sessionWords.length - 1){
+      idx++;
+      nextBtn.classList.add('show');
+    } else {
+      celebrateEl.textContent = 'You finished ' + lv.name + '! 🏆';
+      idx = 0;
+      redoBtn.classList.add('show');
+      homeBtn.classList.add('show');
+    }
+    saveProgress();
+    renderProgressDots();
+  }
+
+  function launchConfetti(){
+    var layer = document.createElement('div');
+    layer.className = 'confetti';
+    var emojis = ['🎉','⭐','🎈','✨'];
+    for(var i = 0; i < 16; i++){
+      var s = document.createElement('span');
+      s.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      s.style.left = (Math.random()*100) + '%';
+      s.style.animationDuration = (1.6 + Math.random()*1.2) + 's';
+      s.style.fontSize = (16 + Math.random()*14) + 'px';
+      layer.appendChild(s);
+    }
+    document.body.appendChild(layer);
+    setTimeout(function(){ layer.remove(); }, 3000);
+  }
+
+  if(speechSupported){
+    document.getElementById('soundHint').classList.remove('hidden');
+  } else {
+    sayBtn.textContent = '🔇 Sound unavailable';
+    sayBtn.disabled = true;
+  }
+
+  sayBtn.addEventListener('click', function(){ unlockAudioOnce(); speak(sessionWords[idx].word); });
+  nextBtn.addEventListener('click', loadWord);
+  redoBtn.addEventListener('click', function(){ startLevel(currentLevel); });
+  homeBtn.addEventListener('click', goHome);
+  backBtn.addEventListener('click', goHome);
+
+  loadProgress();
+  renderHome();
+})();
+</script>
+</body>
+</html>
