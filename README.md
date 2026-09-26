@@ -1,9 +1,9 @@
 # Spell It! — Android app
 
-A native Android wrapper around four word games for young kids, playable in **English,
+A native Android wrapper around five word games for young kids, playable in **English,
 Danish, or French** via a language switch on the games screen. For Spell It!, Pick It!,
 and See It!, a word is spoken aloud (See It! shows the word as text instead of a picture);
-Add It! reads a sentence aloud instead. Then:
+Add It! and Build It! read a full sentence aloud instead. Then:
 
 - **Spell It!** — tap letter tiles in order to spell the word.
 - **Pick It!** — pick the matching word out of 6 options.
@@ -11,10 +11,16 @@ Add It! reads a sentence aloud instead. Then:
   of 6 options.
 - **See It!** — read (and hear) the word, then pick the matching picture out of 4
   options.
+- **Build It!** — listen to a full sentence, then tap its words back into the correct
+  order.
 
-All four games share the same three difficulty levels (Easy/Medium/Hard) and word banks
-(Add It!'s sentences reuse the same words). Levels are endless — the deck reshuffles and
-keeps going until the player backs out, rather than ending after a fixed round.
+All five games share the same three difficulty levels (Easy/Medium/Hard) and word banks
+(Add It!'s and Build It!'s sentences reuse the same words). Build It! doesn't need its own
+sentence bank — it takes each level's existing Add It! sentence, fills in the blank, and
+splits it into the words the player taps back into order, so puzzle length naturally grows
+from Easy to Hard along with the sentences themselves. Levels are endless — the deck
+reshuffles and keeps going until the player backs out, rather than ending after a fixed
+round.
 
 ## Language support
 
@@ -29,10 +35,10 @@ appears on the games screen, so there's no need to change language mid-round.
 
 ## How it's built
 
-- `app/src/main/assets/www/index.html` — all four games (HTML/CSS/JS). A games screen
-  picks Spell It!, Pick It!, Add It!, or See It! and the language, a levels screen picks
-  the difficulty, then the same play screen renders whichever mode is active. All UI
-  copy, word/sentence banks, and game names are organized per-language
+- `app/src/main/assets/www/index.html` — all five games (HTML/CSS/JS). A games screen
+  picks Spell It!, Pick It!, Add It!, See It!, or Build It! and the language, a levels
+  screen picks the difficulty, then the same play screen renders whichever mode is active.
+  All UI copy, word/sentence banks, and game names are organized per-language
   (`STRINGS`, `GAMES_BY_LANG`, `LEVELS_BY_LANG`) and looked up by the currently selected
   language throughout.
 - `MainActivity.kt` — loads that page in a full-screen `WebView` and injects a small
