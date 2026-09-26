@@ -1,6 +1,6 @@
 # Spell It! — Android app
 
-A native Android wrapper around five word games for young kids, playable in **English,
+A native Android wrapper around six word games for young kids, playable in **English,
 Danish, or French** via a language switch on the games screen. For Spell It!, Pick It!,
 and See It!, a word is spoken aloud (See It! shows the word as text instead of a picture);
 Add It! and Build It! read a full sentence aloud instead. Then:
@@ -13,12 +13,16 @@ Add It! and Build It! read a full sentence aloud instead. Then:
   options.
 - **Build It!** — listen to a full sentence, then tap its words back into the correct
   order.
+- **Randomise It!** — mixes in a random pick from all five games above, round after
+  round, so the mode keeps changing while you play.
 
-All five games share the same three difficulty levels (Easy/Medium/Hard) and word banks
+All six games share the same three difficulty levels (Easy/Medium/Hard) and word banks
 (Add It!'s and Build It!'s sentences reuse the same words). Build It! doesn't need its own
 sentence bank — it takes each level's existing Add It! sentence, fills in the blank, and
 splits it into the words the player taps back into order, so puzzle length naturally grows
-from Easy to Hard along with the sentences themselves. Levels are endless — the deck
+from Easy to Hard along with the sentences themselves. Randomise It! doesn't need its own
+content either — each round it draws a game and an item at random from a deck built out of
+the other five games' own words and sentences for that level. Levels are endless — the deck
 reshuffles and keeps going until the player backs out, rather than ending after a fixed
 round.
 
@@ -35,9 +39,10 @@ appears on the games screen, so there's no need to change language mid-round.
 
 ## How it's built
 
-- `app/src/main/assets/www/index.html` — all five games (HTML/CSS/JS). A games screen
-  picks Spell It!, Pick It!, Add It!, See It!, or Build It! and the language, a levels
-  screen picks the difficulty, then the same play screen renders whichever mode is active.
+- `app/src/main/assets/www/index.html` — all six games (HTML/CSS/JS). A games screen
+  picks Spell It!, Pick It!, Add It!, See It!, Build It!, or Randomise It! and the
+  language, a levels screen picks the difficulty, then the same play screen renders
+  whichever mode is active.
   All UI copy, word/sentence banks, and game names are organized per-language
   (`STRINGS`, `GAMES_BY_LANG`, `LEVELS_BY_LANG`) and looked up by the currently selected
   language throughout.
