@@ -233,6 +233,11 @@
 (function(){
   var PICK_OPTION_COUNT = 6;
   var SEE_OPTION_COUNT = 4;
+  // Build It!'s Easy level specifically uses only its level's shorter sentences
+  // (Medium/Hard use the full sentence pool, same as Add It!, since those already
+  // run longer on average).
+  var BUILD_EASY_MAX_WORDS = 6;
+  var BUILD_EASY_MIN_POOL = 10;
 
   var LANG_STORAGE_KEY = 'spellit_lang';
   var LANG_TTS_CODE = { en:'en-US', da:'da-DK', fr:'fr-FR' };
@@ -453,7 +458,7 @@
     // loadWord() reshuffles and starts a fresh lap whenever the deck runs out, so a
     // level never "finishes" — it just keeps going until the player backs out.
     var usesSentences = currentGame.id === 'add' || currentGame.id === 'build';
-    var pool = usesSentences ? lv.sentences : lv.words;
+    var pool = currentGame.id === 'build' ? buildPoolFor(lv) : (usesSentences ? lv.sentences : lv.words);
     sessionWords = shuffle(pool);
     idx = 0;
     levelScreen.classList.add('hidden');
@@ -520,12 +525,26 @@
     return a;
   }
 
+  function sentenceWordCount(item){
+    return item.text.replace('___', item.answer).trim().split(/\s+/).length;
+  }
+
+  // Add It! always draws from a level's full sentence pool. Build It! does too,
+  // except on Easy, where it's narrowed to that level's own shorter sentences so
+  // Easy puzzles are noticeably shorter than Medium/Hard — falling back to the
+  // full pool if too few sentences are short enough to keep enough variety.
+  function buildPoolFor(level){
+    if(level.id !== 'easy') return level.sentences;
+    var shorter = level.sentences.filter(function(s){ return sentenceWordCount(s) <= BUILD_EASY_MAX_WORDS; });
+    return shorter.length >= BUILD_EASY_MIN_POOL ? shorter : level.sentences;
+  }
+
   function loadWord(){
     // Reshuffle and start a new lap once the deck is exhausted, instead of ending
     // the level — Easy/Medium/Hard just keep going until the player backs out.
     if(idx >= sessionWords.length){
       var usesSentences = currentGame.id === 'add' || currentGame.id === 'build';
-      var pool = usesSentences ? currentLevel.sentences : currentLevel.words;
+      var pool = currentGame.id === 'build' ? buildPoolFor(currentLevel) : (usesSentences ? currentLevel.sentences : currentLevel.words);
       sessionWords = shuffle(pool);
       idx = 0;
     }
@@ -626,6 +645,16 @@
     }
   }
 
+  // Tiles/slots show every word in capitals (matching Spell It!'s uppercase letter
+  // tiles) and drop the sentence-ending period from the last word only — internal
+  // punctuation (commas, an apostrophe, etc.) on other words is left alone. This is
+  // purely a display transform: matching/order-checking still uses the original
+  // (lowercase, period-intact) token text via buildTokens, so it's unaffected.
+  function buildDisplayToken(tok, isLast){
+    var t = isLast ? tok.replace(/\.+$/, '') : tok;
+    return t.toUpperCase();
+  }
+
   // Build It! reuses the same {text, answer} sentence bank as Add It! — the full
   // sentence (blank filled in with its answer) is split on whitespace into the
   // words the player has to tap back into order, so no separate content bank is
@@ -634,6 +663,7 @@
   function renderBuildTiles(item){
     var full = item.text.replace('___', item.answer);
     buildTokens = full.trim().split(/\s+/);
+    var lastIdx = buildTokens.length - 1;
 
     buildSlotsEl.innerHTML = '';
     buildTokens.forEach(function(){
@@ -642,12 +672,13 @@
       buildSlotsEl.appendChild(s);
     });
 
-    var shuffled = shuffle(buildTokens);
+    var order = shuffle(buildTokens.map(function(_, i){ return i; }));
     buildTilesEl.innerHTML = '';
-    shuffled.forEach(function(tok){
+    order.forEach(function(i){
+      var tok = buildTokens[i];
       var btn = document.createElement('button');
       btn.className = 'build-tile';
-      btn.textContent = tok;
+      btn.textContent = buildDisplayToken(tok, i === lastIdx);
       btn.addEventListener('click', function(){ handleBuildTap(tok, btn); });
       buildTilesEl.appendChild(btn);
     });
@@ -660,7 +691,7 @@
       answer.push(token);
       btn.classList.add('used');
       var slot = buildSlotsEl.children[answer.length - 1];
-      slot.textContent = token;
+      slot.textContent = buildDisplayToken(token, answer.length === buildTokens.length);
       slot.classList.add('filled');
       if(answer.length === buildTokens.length) onWordComplete();
     } else {
