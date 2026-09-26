@@ -832,7 +832,16 @@
     } else {
       completedWord = sessionWords[idx].word;
     }
-    speak(completedWord + strs.wellDone, true);
+    // wellDone begins with a punctuation mark meant to follow a spoken word
+    // (e.g. "! Well done."). With no word in front of it (Build It!), that
+    // leading mark has nothing to attach to, and some TTS voices read it as
+    // its own name (e.g. Danish saying "udråbstegn") instead of treating
+    // it as punctuation. Strip it so Build It! speaks a clean standalone phrase.
+    var wellDoneText = strs.wellDone;
+    if(completedWord === ''){
+      wellDoneText = wellDoneText.replace(/^[\s ]*[!?.,][\s ]*/, '');
+    }
+    speak(completedWord + wellDoneText, true);
     launchConfetti();
 
     // A level never ends here — idx just keeps advancing, and loadWord() reshuffles
