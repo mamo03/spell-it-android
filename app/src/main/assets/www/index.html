@@ -695,6 +695,9 @@
       slot.classList.add('filled');
       if(answer.length === buildTokens.length) onWordComplete();
     } else {
+      // Announce the wrongly-tapped word itself, same as a wrong Pick It!/Add
+      // It!/See It! tap, so the child hears what they just tapped.
+      speak(token);
       btn.classList.remove('shake');
       void btn.offsetWidth;
       btn.classList.add('shake');
