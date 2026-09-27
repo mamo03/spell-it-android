@@ -35,13 +35,14 @@ choice is remembered between visits (`localStorage`) and applies to every game's
 word banks, Add It! sentences, and spoken audio. Every non-English language has its own
 independently curated word bank per difficulty level — bucketed by actual word length in
 that language, not translated one-to-one from English — since word lengths differ between
-languages. Current word bank sizes (easy/medium/hard): English 198/200/170, Danish
-121/147/135, French 101/134/121, German 114/139/149, Spanish 112/194/204, Italian
-100/128/121, Polish 107/130/135, Arabic 154/164/77 (undiacritized Modern Standard Arabic —
+languages. Current word bank sizes (easy/medium/hard): English 250/250/220, Danish
+174/192/180, French 148/183/172, German 147/190/190, Spanish 151/217/230, Italian
+120/188/173, Polish 134/233/205, Arabic 194/200/92 (undiacritized Modern Standard Arabic —
 Arabic's root-and-pattern morphology means simple concrete nouns cluster at 3-6 letters, so
-the 7+-letter "hard" bucket is real but genuinely smaller than the other languages'). The
-language switch only appears on the games screen, so there's no need to change language
-mid-round.
+the 7+-letter "hard" bucket is real but genuinely smaller than the other languages'). Every
+word bank and its matching Add It! sentence bank has been through a dedicated
+spelling/grammar audit per language, on top of the size increase. The language switch only
+appears on the games screen, so there's no need to change language mid-round.
 
 Arabic also switches the whole page to right-to-left: the `<html>` element's `dir`
 attribute flips between `"ltr"` and `"rtl"` together with `lang`, which — since the layout
