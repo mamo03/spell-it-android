@@ -3,6 +3,7 @@ package com.spellit.kids
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -19,9 +20,10 @@ import java.util.Locale
  *
  * Android's WebView does not implement the Web Speech Synthesis API used by desktop
  * browsers (window.speechSynthesis returns no voices), so the page's JavaScript calls
- * window.AndroidTTS.speak(text, queue, lang) when this bridge is present, and falls back
- * to speechSynthesis only when it isn't (e.g. when the same HTML is opened in a browser).
- * lang is a BCP-47 tag ("en-US" or "da-DK") matching the page's language selector.
+ * window.AndroidTTS.speak(text, queue, lang, slow, highlight) when this bridge is
+ * present, and falls back to speechSynthesis only when it isn't (e.g. when the same
+ * HTML is opened in a browser). lang is a BCP-47 tag ("en-US" or "da-DK") matching the
+ * page's language selector.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tts: TextToSpeech
     private var ttsReady = false
     private var currentTtsLocale: Locale = Locale.US
+    private var currentTtsRate: Float = NORMAL_RATE
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +41,31 @@ class MainActivity : AppCompatActivity() {
             if (status == TextToSpeech.SUCCESS) {
                 tts.language = currentTtsLocale
                 tts.setPitch(1.1f)
-                tts.setSpeechRate(0.9f)
+                tts.setSpeechRate(currentTtsRate)
+                // Forwards word-by-word progress back to the page while it's speaking
+                // Add It!'s sentence, so it can highlight the word currently being
+                // read (see index.html's window.__ttsRange / highlightWordAtCharIndex).
+                // Only invoked by engines that support ranged progress (Android O+ and
+                // engine-dependent) — on any other engine/device this callback simply
+                // never fires and the sentence just doesn't highlight, same as any
+                // other best-effort TTS feature in this app.
+                tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
+                    override fun onDone(utteranceId: String?) {}
+
+                    @Suppress("OVERRIDE_DEPRECATION")
+                    override fun onError(utteranceId: String?) {}
+
+                    override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                        if (utteranceId != HIGHLIGHT_UTTERANCE_ID) return
+                        runOnUiThread {
+                            webView.evaluateJavascript(
+                                "window.__ttsRange && window.__ttsRange($start)",
+                                null
+                            )
+                        }
+                    }
+                })
                 ttsReady = true
             }
         }
@@ -96,9 +123,15 @@ class MainActivity : AppCompatActivity() {
          * If the requested language's voice data isn't installed on the device, we still
          * attempt to speak in the best voice the engine falls back to, rather than
          * silently dropping the word.
+         *
+         * slow=true reads at SLOW_RATE instead of NORMAL_RATE — used for Add It!/Build
+         * It!'s full sentences, which are easier to follow a little slower than single
+         * words and letters. highlight=true (Add It! only) tags the utterance so
+         * onRangeStart forwards word-boundary progress back to the page for its
+         * word-by-word highlight; other calls are untagged and never trigger it.
          */
         @JavascriptInterface
-        fun speak(text: String, queue: Boolean, lang: String) {
+        fun speak(text: String, queue: Boolean, lang: String, slow: Boolean, highlight: Boolean) {
             if (!ttsReady) return
             runOnUiThread {
                 val locale = try {
@@ -116,9 +149,21 @@ class MainActivity : AppCompatActivity() {
                     // keeps working (just not in the requested language) instead of going
                     // silent or throwing.
                 }
+                val rate = if (slow) SLOW_RATE else NORMAL_RATE
+                if (rate != currentTtsRate) {
+                    tts.setSpeechRate(rate)
+                    currentTtsRate = rate
+                }
                 val mode = if (queue) TextToSpeech.QUEUE_ADD else TextToSpeech.QUEUE_FLUSH
-                tts.speak(text, mode, null, "spellItUtterance")
+                val utteranceId = if (highlight) HIGHLIGHT_UTTERANCE_ID else "spellItUtterance"
+                tts.speak(text, mode, null, utteranceId)
             }
         }
+    }
+
+    companion object {
+        private const val NORMAL_RATE = 0.9f
+        private const val SLOW_RATE = 0.68f
+        private const val HIGHLIGHT_UTTERANCE_ID = "spellItSentenceHighlight"
     }
 }

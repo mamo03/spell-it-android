@@ -139,6 +139,8 @@
   .sentence-card{ font-family:'Baloo 2', sans-serif; font-weight:700; font-size:18px; color:var(--ink); text-align:center; line-height:1.45; padding:2px 4px; }
   .blank-chip{ display:inline-block; min-width:70px; padding:2px 12px; border-bottom:3px dashed var(--coral); font-weight:800; color:var(--coral); }
   .blank-chip.filled{ border-bottom-color:transparent; color:var(--leaf); }
+  .sentence-word{ display:inline-block; border-radius:6px; padding:1px 4px; margin:0 -4px; transition:background-color .12s ease, color .12s ease; }
+  .sentence-word.highlight, .blank-chip.highlight{ background:var(--sun); color:var(--ink); }
 
   /* Build It! mode */
   .build-slots{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; min-height:34px; }
@@ -252,6 +254,10 @@
 (function(){
   var PICK_OPTION_COUNT = 6;
   var SEE_OPTION_COUNT = 4;
+  // Add It! and Build It! read a full sentence rather than a single word, so they
+  // speak it a bit slower than the normal word/letter rate below for easier following.
+  var NORMAL_RATE = 0.85;
+  var SENTENCE_SLOW_RATE = 0.65;
   // Build It!'s Easy level specifically uses only its level's shorter sentences
   // (Medium/Hard use the full sentence pool, same as Add It!, since those already
   // run longer on average).
@@ -472,6 +478,41 @@
   var speechSupported = hasNativeTTS || ('speechSynthesis' in window);
   var audioUnlocked = false;
 
+  // Add It!'s word-by-word sentence highlighting. sentenceTokens/sentenceWordEls are
+  // parallel arrays (built by renderSentence) mapping each word's character range in
+  // the spoken sentence to the DOM element that should light up while it's being said.
+  // activeWordBoundaryHandler is only set while a highlightable sentence is speaking;
+  // every other speak() call (single words, letters, the well-done message) clears it.
+  var sentenceTokens = null, sentenceWordEls = null, lastHighlightEl = null;
+  var activeWordBoundaryHandler = null;
+
+  function clearSentenceHighlight(){
+    if(lastHighlightEl){ lastHighlightEl.classList.remove('highlight'); lastHighlightEl = null; }
+  }
+
+  function highlightWordAtCharIndex(charIndex){
+    if(!sentenceTokens || !sentenceWordEls) return;
+    for(var i = 0; i < sentenceTokens.length; i++){
+      var t = sentenceTokens[i];
+      if(charIndex >= t.start && charIndex < t.end){
+        clearSentenceHighlight();
+        var el = sentenceWordEls[i];
+        el.classList.add('highlight');
+        lastHighlightEl = el;
+        return;
+      }
+    }
+  }
+
+  // Called from the native Android TTS bridge (see MainActivity.kt's onRangeStart)
+  // with the character range of the word currently being spoken, when the engine
+  // supports reporting it. Not every device's TTS engine calls this — highlighting
+  // simply stays static on devices where it doesn't, same as any other best-effort
+  // TTS feature here.
+  window.__ttsRange = function(start){
+    if(activeWordBoundaryHandler) activeWordBoundaryHandler(start);
+  };
+
   function unlockAudioOnce(){
     if(audioUnlocked || !speechSupported || hasNativeTTS) return;
     audioUnlocked = true;
@@ -623,18 +664,30 @@
   // Speech always uses the currently active language (lang), so words, letters and
   // celebration messages are spoken in the right voice without any extra plumbing
   // at each call site.
-  function speak(text, queue){
+  // opts.slow reads the text at SENTENCE_SLOW_RATE instead of the normal word/letter
+  // rate (used for Add It!/Build It!'s full sentences). opts.onWord, when given, is
+  // called with the character offset of each word as it starts being spoken, driving
+  // Add It!'s word-by-word highlight; every call resets the active handler, so it
+  // never lingers into an unrelated later speak() call.
+  function speak(text, queue, opts){
+    opts = opts || {};
+    activeWordBoundaryHandler = opts.onWord || null;
     if(!speechSupported) return;
     var ttsLang = LANG_TTS_CODE[lang] || 'en-US';
     if(hasNativeTTS){
-      try{ window.AndroidTTS.speak(text, !!queue, ttsLang); }catch(e){}
+      try{ window.AndroidTTS.speak(text, !!queue, ttsLang, !!opts.slow, !!opts.onWord); }catch(e){}
       return;
     }
     try{
       if(!queue){ window.speechSynthesis.cancel(); }
       var u = new SpeechSynthesisUtterance(text);
-      u.rate = 0.85; u.pitch = 1.1; u.volume = 1;
+      u.rate = opts.slow ? SENTENCE_SLOW_RATE : NORMAL_RATE; u.pitch = 1.1; u.volume = 1;
       u.lang = ttsLang;
+      if(opts.onWord){
+        u.onboundary = function(event){
+          if(event && event.name === 'word') opts.onWord(event.charIndex || 0);
+        };
+      }
       var voices = window.speechSynthesis.getVoices();
       if(voices && voices.length){
         var langPrefix = ttsLang.split('-')[0].toLowerCase();
@@ -737,13 +790,13 @@
 
     if(gid === 'add'){
       renderSentence(current);
-      speak(current.text.replace('___', current.answer));
+      speak(current.text.replace('___', current.answer), false, { slow: true, onWord: highlightWordAtCharIndex });
       return;
     }
 
     if(gid === 'build'){
       renderBuildTiles(current);
-      speak(current.text.replace('___', current.answer));
+      speak(current.text.replace('___', current.answer), false, { slow: true });
       return;
     }
 
@@ -920,19 +973,47 @@
     }
   }
 
+  // Renders the sentence as one span per word (plus the blank chip in the answer's
+  // place) instead of two plain text nodes, so each word can be highlighted
+  // individually as it's spoken. sentenceTokens records each word's character
+  // range within the FILLED sentence (the same text speak() is given), which is
+  // what highlightWordAtCharIndex matches TTS word-boundary events against.
   function renderSentence(item){
-    var parts = item.text.split('___');
+    clearSentenceHighlight();
+    var blankStart = item.text.indexOf('___');
+    var filled = item.text.replace('___', item.answer);
+
+    var tokens = [];
+    var re = /\S+/g, m;
+    while((m = re.exec(filled))){
+      tokens.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+    }
+    var blankTokenIndex = tokens.findIndex(function(t){ return blankStart >= t.start && blankStart < t.end; });
+
     sentenceCardEl.innerHTML = '';
-    sentenceCardEl.appendChild(document.createTextNode(parts[0]));
-    var chip = document.createElement('span');
-    chip.className = 'blank-chip';
-    // A non-breaking space keeps the chip's height/min-width while empty; the
-    // dashed border-bottom alone marks the blank, so there's only one line
-    // under it (not one from underscore characters plus one from the border).
-    chip.textContent = ' ';
-    sentenceCardEl.appendChild(chip);
-    blankChipEl = chip;
-    sentenceCardEl.appendChild(document.createTextNode(parts[1]));
+    sentenceWordEls = [];
+    blankChipEl = null;
+    tokens.forEach(function(tok, i){
+      if(i > 0) sentenceCardEl.appendChild(document.createTextNode(' '));
+      if(i === blankTokenIndex){
+        var chip = document.createElement('span');
+        chip.className = 'blank-chip';
+        // A non-breaking space keeps the chip's height/min-width while empty; the
+        // dashed border-bottom alone marks the blank, so there's only one line
+        // under it (not one from underscore characters plus one from the border).
+        chip.textContent = ' ';
+        sentenceCardEl.appendChild(chip);
+        blankChipEl = chip;
+        sentenceWordEls.push(chip);
+      } else {
+        var span = document.createElement('span');
+        span.className = 'sentence-word';
+        span.textContent = tok.text;
+        sentenceCardEl.appendChild(span);
+        sentenceWordEls.push(span);
+      }
+    });
+    sentenceTokens = tokens;
     buildOptionButtons(addOptionsEl, item.answer, handleAddPick);
   }
 
@@ -1057,8 +1138,10 @@
     unlockAudioOnce();
     var current = sessionWords[idx];
     var gid = currentGame.id === 'random' ? current.gameId : currentGame.id;
-    if(gid === 'add' || gid === 'build'){
-      speak(current.text.replace('___', current.answer));
+    if(gid === 'add'){
+      speak(current.text.replace('___', current.answer), false, { slow: true, onWord: highlightWordAtCharIndex });
+    } else if(gid === 'build'){
+      speak(current.text.replace('___', current.answer), false, { slow: true });
     } else {
       speak(current.word);
     }
