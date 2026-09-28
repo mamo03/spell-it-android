@@ -11,14 +11,40 @@ android {
         applicationId "com.spellit.kids"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
+    }
+
+    // Reads the Play Store release keystore from environment variables rather than
+    // hardcoding it, so the keystore itself and its passwords never need to touch the
+    // repo. Locally these are simply unset, so `assembleDebug`/day-to-day work is
+    // unaffected; only `bundleRelease`/`assembleRelease` need them, and that's run in
+    // CI (see .github/workflows/android-release.yml) with the values coming from
+    // GitHub Actions repo secrets.
+    def releaseKeystorePath = System.getenv("SPELLIT_RELEASE_KEYSTORE_PATH")
+    def releaseKeystorePassword = System.getenv("SPELLIT_RELEASE_KEYSTORE_PASSWORD")
+    def releaseKeyAlias = System.getenv("SPELLIT_RELEASE_KEY_ALIAS")
+    def releaseKeyPassword = System.getenv("SPELLIT_RELEASE_KEY_PASSWORD")
+    def hasReleaseSigningConfig = releaseKeystorePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
+
+    if (hasReleaseSigningConfig) {
+        signingConfigs {
+            release {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
