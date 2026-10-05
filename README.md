@@ -1,7 +1,7 @@
 # Spell It! — Android app
 
 A native Android wrapper around six word games for young kids, playable in **English,
-Danish, French, German, Spanish, Italian, Polish, or Arabic** via a language switch on the
+Danish, French, German, Spanish, Italian, Polish, Dutch, or Arabic** via a language switch on the
 games screen. For Spell It!, Pick It!,
 and See It!, a word is spoken aloud (See It! shows the word as text instead of a picture);
 Add It! and Build It! read a full sentence aloud instead. Then:
@@ -29,15 +29,15 @@ round.
 
 ## Language support
 
-The games screen has an 8-language switch, shown as a dropdown (🇬🇧 English / 🇩🇰 Dansk /
-🇫🇷 Français / 🇩🇪 Deutsch / 🇪🇸 Español / 🇮🇹 Italiano / 🇵🇱 Polski / 🇸🇦 العربية). The
+The games screen has a 9-language switch, shown as a dropdown (🇬🇧 English / 🇩🇰 Dansk /
+🇫🇷 Français / 🇩🇪 Deutsch / 🇪🇸 Español / 🇮🇹 Italiano / 🇵🇱 Polski / 🇳🇱 Nederlands / 🇸🇦 العربية). The
 choice is remembered between visits (`localStorage`) and applies to every game's UI text,
 word banks, Add It! sentences, and spoken audio. Every non-English language has its own
 independently curated word bank per difficulty level — bucketed by actual word length in
 that language, not translated one-to-one from English — since word lengths differ between
 languages. Current word bank sizes (easy/medium/hard): English 250/250/220, Danish
 174/192/180, French 148/183/172, German 147/190/190, Spanish 151/217/230, Italian
-120/188/173, Polish 134/233/205, Arabic 194/200/92 (undiacritized Modern Standard Arabic —
+120/188/173, Polish 134/233/205, Dutch 116/99/97, Arabic 194/200/92 (undiacritized Modern Standard Arabic —
 Arabic's root-and-pattern morphology means simple concrete nouns cluster at 3-6 letters, so
 the 7+-letter "hard" bucket is real but genuinely smaller than the other languages'). Every
 word bank and its matching Add It! sentence bank has been through a dedicated
@@ -67,7 +67,7 @@ language.
   native bridge when running inside the app, and falls back to `speechSynthesis` only when
   opened directly in a browser (so the same HTML file still works as a web page too). The
   bridge's `speak(text, queue, lang)` takes a BCP-47 language tag (e.g. "en-US"/"da-DK"/
-  "fr-FR"/"de-DE"/"es-ES"/"it-IT"/"pl-PL"/"ar-SA") from the page and switches the native TTS
+  "fr-FR"/"de-DE"/"es-ES"/"it-IT"/"pl-PL"/"nl-NL"/"ar-SA") from the page and switches the native TTS
   engine's voice to match, falling back gracefully if a language's voice data isn't
   installed on the device — adding another language is a page-side change only, since the
   bridge just forwards whatever tag it's given.
