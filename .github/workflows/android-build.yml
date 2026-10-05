@@ -3,6 +3,10 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
+    # Docs-only changes (privacy policy page, README) don't need a new APK build.
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
   workflow_dispatch: {}
 
 permissions:
