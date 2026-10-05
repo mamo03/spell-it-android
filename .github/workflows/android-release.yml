@@ -104,7 +104,23 @@ jobs:
           SPELLIT_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.SPELLIT_RELEASE_KEYSTORE_PASSWORD }}
           SPELLIT_RELEASE_KEY_ALIAS: ${{ secrets.SPELLIT_RELEASE_KEY_ALIAS }}
           SPELLIT_RELEASE_KEY_PASSWORD: ${{ secrets.SPELLIT_RELEASE_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease --no-daemon
+        run: |
+          set -o pipefail
+          ./gradlew bundleRelease --no-daemon 2>&1 | tee "$RUNNER_TEMP/gradle.log"
+
+      # If the Gradle build fails, push the last lines of its output (no secrets are printed
+      # by Gradle) to a throwaway branch so the failure can be diagnosed without raw-log access.
+      - name: Push build log tail to a debug branch on failure
+        if: failure() && steps.decode_keystore.outcome == 'success'
+        run: |
+          mkdir -p debug
+          tail -n 150 "$RUNNER_TEMP/gradle.log" > debug/gradle-failure.txt || echo "no log" > debug/gradle-failure.txt
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git checkout -B debug/build-log
+          git add debug/gradle-failure.txt
+          git commit -m "Record Gradle failure tail" || true
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:debug/build-log
 
       - name: Remove decoded keystore
         if: always()

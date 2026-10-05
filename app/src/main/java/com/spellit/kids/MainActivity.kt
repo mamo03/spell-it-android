@@ -9,7 +9,11 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import java.util.Locale
@@ -92,21 +96,39 @@ class MainActivity : AppCompatActivity() {
             loadUrl("file:///android_asset/www/index.html")
         }
 
+        // Targeting Android 15+ forces edge-to-edge: the window draws behind the status and
+        // navigation bars. Pad the WebView by the system-bar/cutout insets so the games never
+        // sit under them, and keep the status-bar icons light against the sky-blue page.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
+
         setContentView(webView)
+
+        // Replaces the deprecated onBackPressed() override, which is no longer called when
+        // targeting API 36 (predictive back).
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     override fun onDestroy() {
         tts.stop()
         tts.shutdown()
         super.onDestroy()
-    }
-
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
     }
 
     /** Exposed to the page's JavaScript as window.AndroidTTS. */
