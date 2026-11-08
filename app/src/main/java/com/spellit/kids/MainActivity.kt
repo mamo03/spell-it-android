@@ -11,6 +11,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -97,11 +98,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Targeting Android 15+ forces edge-to-edge: the window draws behind the status and
-        // navigation bars. Pad the WebView by the system-bar/cutout insets so the games never
-        // sit under them, and keep the status-bar icons light against the sky-blue page.
+        // navigation bars. A plain FrameLayout container holds the WebView and is padded by the
+        // system-bar/cutout insets, so the games never sit under them. (Padding the WebView
+        // itself is not reliable: it can ignore padding for its page content.) The container's
+        // sky-blue background fills the padded strips behind the bars, and the status-bar icons
+        // are kept light against it.
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-        ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
+        val container = FrameLayout(this).apply {
+            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.sky))
+            addView(webView)
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
@@ -109,7 +117,7 @@ class MainActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        setContentView(webView)
+        setContentView(container)
 
         // Replaces the deprecated onBackPressed() override, which is no longer called when
         // targeting API 36 (predictive back).
